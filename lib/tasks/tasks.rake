@@ -260,6 +260,11 @@ namespace :crucible do
     require 'erb'
     require 'tilt'
     require 'fileutils'
+    # Transform TestReports to TestResults
+    results = results.each_with_object({}) do |(k, v), a|
+      v = convert_testreport_to_testresults(v) if v.is_a?(FHIR::TestReport)
+      a[k] = v
+    end
     totals = Hash.new(0)
     metadata = Hash.new(0)
     results.values.each do |suite|
