@@ -66,8 +66,8 @@ module Crucible
         return unless @@models.empty?
         # get all specification example TestScripts
         root = File.expand_path '.', File.dirname(File.absolute_path(__FILE__))
-        path = File.join(root, 'scripts', 'spec', '**/*.xml')
-        script_files = Dir.glob(path)
+        # path = File.join(root, 'scripts', 'spec', '**/*.xml')
+        # script_files = Dir.glob(path)
         # get all the Connectathon TestScripts
         path = File.join(root, 'scripts', 'connectathon', '**/*.xml')
         script_files = Dir.glob(path)
