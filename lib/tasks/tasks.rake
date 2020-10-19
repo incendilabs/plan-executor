@@ -39,10 +39,7 @@ namespace :crucible do
       client.use_dstu2 if fhir_version == :dstu2
       options = client.get_oauth2_metadata_from_conformance
       set_client_secrets(client,options) unless options.empty?
-      results = execute_all(client)
-      if args.html_summary
-        generate_html_summary(args.url, results, "ExecuteAll")
-      end
+      execute_all(args.url, client, args.html_summary)
     }
     puts "Execute All completed in #{b.real} seconds."
   end
@@ -160,7 +157,7 @@ namespace :crucible do
     output_results results
   end
 
-  def execute_all(client)
+  def execute_all(url, client, html_summary=0)
     executor = Crucible::Tests::Executor.new(client)
     all_results = {}
     executor.tests.each do |test|
@@ -169,6 +166,9 @@ namespace :crucible do
       results = executor.execute(test)
       all_results.merge! results
       output_results results
+      if html_summary
+        generate_html_summary(url, results, test.id)
+      end
     end
     all_results
   end
@@ -349,7 +349,7 @@ namespace :crucible do
         client.use_dstu2 if fhir_version == :dstu2
         options = client.get_oauth2_metadata_from_conformance
         set_client_secrets(client,options) unless options.empty?
-        results = execute_all(client)
+        results = execute_all(url, client)
         if args.html_summary
           generate_html_summary(url, results, "ExecuteAll")
         end
