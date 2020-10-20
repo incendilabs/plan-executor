@@ -76,7 +76,7 @@
                           <% value.each do |k, v| %>
                             <div class="row">
                               <div class="col-md-1"><%= k %></div>
-                              <div class="col-md-11"><%= v %></div>
+                              <div class="col-md-11"><code><%= h(v) %></code></div>
                             </div>
                           <% end %>
                         <% elsif value.class == Array %>
@@ -85,12 +85,12 @@
                               <% v.each do |vk, vv| %>
                                 <div class="row">
                                   <div class="col-md-1"><%= vk %></div>
-                                  <div class="col-md-11"><%= vv %></div>
+                                  <div class="col-md-11"><code><%= h(vv) %></code></div>
                                 </div>
                               <% end %>
                             <% else %>
                               <div class="row">
-                                <div class="col-md-12"><%= v %></div>
+                                <div class="col-md-12"><code><%= h(v) %></code></div>
                               </div>
                             <% end %>
                           <% end %>

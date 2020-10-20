@@ -260,6 +260,7 @@ namespace :crucible do
     require 'erb'
     require 'tilt'
     require 'fileutils'
+    include ERB::Util
     # Transform TestReports to TestResults
     results = results.each_with_object({}) do |(k, v), a|
       v = convert_testreport_to_testresults(v) if v.is_a?(FHIR::TestReport)
