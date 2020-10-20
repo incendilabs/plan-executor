@@ -207,6 +207,12 @@ module Crucible
         end
         resource.code = minimal_codeableconcept(system,code, namespace)
         resource.verificationStatus = 'confirmed'
+        if resource.is_a?(FHIR::Condition)
+          # They changed it from `code` data type to `CodeableConcept` in `R4`
+          resource.verificationStatus = minimal_codeableconcept(
+              'http://terminology.hl7.org/CodeSystem/condition-ver-status',
+              resource.verificationStatus)
+        end
         tag_metadata(resource)
       end
 
