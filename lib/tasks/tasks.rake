@@ -87,7 +87,7 @@ namespace :crucible do
   end
 
   desc 'execute'
-  task :execute, [:url, :fhir_version, :test, :resource] do |t, args|
+  task :execute, [:url, :fhir_version, :test, :resource, :html_summary] do |t, args|
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     fhir_version = resolve_fhir_version(args.fhir_version)
     require 'benchmark'
@@ -98,7 +98,7 @@ namespace :crucible do
       client.use_dstu2 if fhir_version == :dstu2
       options = client.get_oauth2_metadata_from_conformance
       set_client_secrets(client,options) unless options.empty?
-      execute_test(client, args.test, args.resource)
+      execute_test(args.url, client, args.test, args.resource, args.html_summary)
     }
     puts "Execute #{args.test} completed in #{b.real} seconds."
   end
@@ -134,7 +134,7 @@ namespace :crucible do
     end
   end
 
-  def execute_test(client, key, resourceType=nil)
+  def execute_test(url, client, key, resourceType=nil, html_summary=nil)
     executor = Crucible::Tests::Executor.new(client)
     test = executor.find_test(key)
     if test.nil? || (test.is_a?(Array) && test.empty?)
@@ -155,9 +155,12 @@ namespace :crucible do
     end
     results = executor.execute(test) if results.nil?
     output_results results
+    if html_summary
+      generate_html_summary(url, results, test.id)
+    end
   end
 
-  def execute_all(url, client, html_summary=0)
+  def execute_all(url, client, html_summary=nil)
     executor = Crucible::Tests::Executor.new(client)
     all_results = {}
     executor.tests.each do |test|
@@ -317,10 +320,7 @@ namespace :crucible do
         client.use_dstu2 if fhir_version == :dstu2
         options = client.get_oauth2_metadata_from_conformance
         set_client_secrets(client,options) unless options.empty?
-        results = execute_test(client, args.test, args.resource_type)
-        if args.html_summary
-          generate_html_summary(url, results, args.test)
-        end
+        execute_test(url, client, args.test, args.resource_type, args.html_summary)
       }
       seconds += b.real
       puts "```"
@@ -402,7 +402,7 @@ namespace :crucible do
   end
 
   desc 'execute with requirements'
-  task :execute_w_requirements, [:url, :fhir_version, :test] do |t, args|
+  task :execute_w_requirements, [:url, :fhir_version, :test, :resource, :html_summary] do |t, args|
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'ansi'
     fhir_version = resolve_fhir_version(args.fhir_version)
@@ -434,7 +434,7 @@ namespace :crucible do
     set_client_secrets(client,options) unless options.empty?
     client.monitor_requirements
     test = args.test.to_sym
-    execute_test(client, test)
+    execute_test(args.url, client, test, args.resource, args.html_summary)
     pp Crucible::Tests::BaseTest.class_variable_get :@@requirements
   end
 
