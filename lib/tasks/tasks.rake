@@ -288,11 +288,11 @@ namespace :crucible do
       end
       template = Tilt.new(File.join(File.dirname(__FILE__), "templates", "summary.html.erb"))
       timestamp = Time.now
-      summary = template.render(self, {:results => results, :timestamp => timestamp.strftime("%D %r"), :totals => totals, :url => url, :metadata => metadata})
+      summary = template.render(self, {:results => {k => v}, :timestamp => timestamp.strftime("%D %r"), :totals => totals, :url => url, :metadata => metadata})
       summary_file = "#{k}_#{url.gsub(/[^a-z0-9]/,'-')}_#{timestamp.strftime("%m-%d-%y_%H-%M-%S")}.html"
-      FileUtils::mkdir_p("html_summaries/#{k}")
-      File.write("html_summaries/#{k}/#{summary_file}", summary)
-      system("open html_summaries/#{k}/#{summary_file}")
+      FileUtils::mkdir_p("html_summaries")
+      File.write("html_summaries/#{summary_file}", summary)
+      system("open html_summaries/#{summary_file}")
     end
   end
 
