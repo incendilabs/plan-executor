@@ -55,7 +55,7 @@ namespace :crucible do
       results = Crucible::Tests::TestScriptEngine.new(client).execute_all
       output_results results
       if args.html_summary
-        generate_html_summary(args.url, results, "ExecuteAll")
+        generate_html_summary(args.url, results)
       end
     }
     puts "Execute All completed in #{b.real} seconds."
@@ -156,7 +156,7 @@ namespace :crucible do
     results = executor.execute(test) if results.nil?
     output_results results
     if html_summary
-      generate_html_summary(url, results, test.id)
+      generate_html_summary(url, results)
     end
   end
 
@@ -170,7 +170,7 @@ namespace :crucible do
       all_results.merge! results
       output_results results
       if html_summary
-        generate_html_summary(url, results, test.id)
+        generate_html_summary(url, results)
       end
     end
     all_results
@@ -259,21 +259,18 @@ namespace :crucible do
     results
   end
 
-  def generate_html_summary(url, results, id="summary")
+  def generate_html_summary(url, results)
     require 'erb'
     require 'tilt'
     require 'fileutils'
     include ERB::Util
     # Transform TestReports to TestResults
-    results = results.each_with_object({}) do |(k, v), a|
+    results.each do |(k, v)|
+      totals = Hash.new(0)
+      metadata = Hash.new(0)
       v = convert_testreport_to_testresults(v) if v.is_a?(FHIR::TestReport)
-      a[k] = v
-    end
-    totals = Hash.new(0)
-    metadata = Hash.new(0)
-    results.values.each do |suite|
-      suite.map{|t| t["status"]}.each_with_object(totals) { |n, h| h[n] += 1}
-      suite.map{|t| {k: t["id"], v: t["validates"], s: t["status"]}}.each_with_object(metadata) do |n, h|
+      v.map{|t| t["status"]}.each_with_object(totals) { |n, h| h[n] += 1}
+      v.map{|t| {k: t["id"], v: t["validates"], s: t["status"]}}.each_with_object(metadata) do |n, h|
         n[:v].each do |val|
           resource = val[:resource].try(:titleize).try(:downcase)
           test_key = n[:k]
@@ -289,14 +286,14 @@ namespace :crucible do
           end if val[:formats]
         end if n[:v]
       end
+      template = Tilt.new(File.join(File.dirname(__FILE__), "templates", "summary.html.erb"))
+      timestamp = Time.now
+      summary = template.render(self, {:results => results, :timestamp => timestamp.strftime("%D %r"), :totals => totals, :url => url, :metadata => metadata})
+      summary_file = "#{k}_#{url.gsub(/[^a-z0-9]/,'-')}_#{timestamp.strftime("%m-%d-%y_%H-%M-%S")}.html"
+      FileUtils::mkdir_p("html_summaries/#{k}")
+      File.write("html_summaries/#{k}/#{summary_file}", summary)
+      system("open html_summaries/#{k}/#{summary_file}")
     end
-    template = Tilt.new(File.join(File.dirname(__FILE__), "templates", "summary.html.erb"))
-    timestamp = Time.now
-    summary = template.render(self, {:results => results, :timestamp => timestamp.strftime("%D %r"), :totals => totals, :url => url, :metadata => metadata})
-    summary_file = "#{id}_#{url.gsub(/[^a-z0-9]/,'-')}_#{timestamp.strftime("%m-%d-%y_%H-%M-%S")}.html"
-    FileUtils::mkdir_p("html_summaries/#{id}")
-    File.write("html_summaries/#{id}/#{summary_file}", summary)
-    system("open html_summaries/#{id}/#{summary_file}")
   end
 
   desc 'execute custom'
@@ -352,7 +349,7 @@ namespace :crucible do
         set_client_secrets(client,options) unless options.empty?
         results = execute_all(url, client)
         if args.html_summary
-          generate_html_summary(url, results, "ExecuteAll")
+          generate_html_summary(url, results)
         end
       }
       seconds += b.real
