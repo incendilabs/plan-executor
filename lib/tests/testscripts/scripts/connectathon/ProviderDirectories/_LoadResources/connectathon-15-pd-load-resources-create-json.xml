@@ -28,7 +28,7 @@
 			<link value="http://hl7.org/fhir/STU3/practitioner.html"/>
 			<link value="http://hl7.org/fhir/STU3/practitionerrole.html"/>
 			<capabilities>
-				<reference value="../_reference/capabilities/LoadTestResourcesCapabilitiesStatement.xml" />
+				<reference value="../_reference/capabilities/LoadTestResourcesCapabilityStatement.xml" />
 			</capabilities>
 		</capability>
 	</metadata>	
