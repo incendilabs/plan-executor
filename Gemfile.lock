@@ -13,6 +13,7 @@ PATH
       nokogiri-diff
       oauth2
       rest-client
+      tzinfo-data
 
 GEM
   remote: https://rubygems.org/
@@ -134,6 +135,8 @@ GEM
     to_regexp (0.2.1)
     tzinfo (1.2.7)
       thread_safe (~> 0.1)
+    tzinfo-data (1.2020.4)
+      tzinfo (>= 1.0.0)
     unf (0.1.4)
       unf_ext
     unf_ext (0.0.7.7)

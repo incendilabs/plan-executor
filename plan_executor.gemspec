@@ -24,6 +24,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency('rest-client')
   s.add_runtime_dependency('date_time_precision')
   s.add_runtime_dependency('bcp47')
+  s.add_runtime_dependency('tzinfo-data')
 
   s.add_development_dependency('tilt')
   s.add_development_dependency('ansi')
