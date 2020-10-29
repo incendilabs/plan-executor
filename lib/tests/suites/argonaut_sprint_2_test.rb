@@ -77,8 +77,8 @@ module Crucible
 
         options = nil
         conformance.rest.each do |rest|
-          assert !rest.security.nil?, "could not get authorization extensions, no security section"
-          assert !rest.security.service.nil?, "could not get authorization extensions, no security/service section"
+          skip unless !rest.security.nil? # "could not get authorization extensions, no security section"
+          skip unless !rest.security.service.nil? #, "could not get authorization extensions, no security/service section"
           rest.security.service.each do |service|
             assert !service.coding.nil?, "could not get authorization extensions, no codings on sercurity/service"
             found_oauth2_code = false
