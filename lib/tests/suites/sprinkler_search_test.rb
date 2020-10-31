@@ -163,7 +163,9 @@ module Crucible
           if !patient.nil? && !patient.name.nil?
             patient.name.each do |name|
               if !name.family.nil?
-                if !(name.family =~ search_regex).nil?
+                familyName = name.family
+                familyName = familyName[0] if familyName.kind_of?(Array)
+                unless (familyName =~ search_regex).nil?
                   isMatch = true
                 end
               end
