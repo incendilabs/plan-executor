@@ -1,4 +1,4 @@
 source "https://rubygems.org"
 
-# gem 'fhir_client', path: '../fhir_client'
+gem 'fhir_dstu2_models', git: 'https://github.com/incendilabs/fhir_dstu2_models.git'
 gemspec

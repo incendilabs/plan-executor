@@ -1,3 +1,13 @@
+GIT
+  remote: https://github.com/incendilabs/fhir_dstu2_models.git
+  revision: f0404c1eb927b95a892b91e06726ce32bfd9c1f4
+  specs:
+    fhir_dstu2_models (1.0.10)
+      bcp47 (>= 0.3)
+      date_time_precision (>= 0.8)
+      mime-types (>= 3.0)
+      nokogiri (>= 1.10.4)
+
 PATH
   remote: .
   specs:
@@ -5,7 +15,6 @@ PATH
       bcp47
       date_time_precision
       fhir_client
-      fhir_dstu2_models
       fhir_models
       fhir_stu3_models
       jsonpath
@@ -54,11 +63,6 @@ GEM
       rack (>= 1.5)
       rest-client (~> 2.0)
       tilt (>= 1.1)
-    fhir_dstu2_models (1.0.10)
-      bcp47 (>= 0.3)
-      date_time_precision (>= 0.8)
-      mime-types (>= 3.0)
-      nokogiri (>= 1.10.4)
     fhir_models (4.1.0)
       bcp47 (>= 0.3)
       date_time_precision (>= 0.8)
@@ -140,6 +144,7 @@ GEM
     unf (0.1.4)
       unf_ext
     unf_ext (0.0.7.7)
+    unf_ext (0.0.7.7-x64-mingw32)
     unicode_utils (1.4.0)
     webmock (3.9.3)
       addressable (>= 2.3.6)
@@ -154,6 +159,7 @@ PLATFORMS
 DEPENDENCIES
   ansi
   awesome_print
+  fhir_dstu2_models!
   plan_executor!
   pry
   pry-coolline
