@@ -13,7 +13,7 @@ module Crucible
           {"SearchTest_#{@resource_class.name.demodulize}" => execute_test_methods}
         else
           results = {}
-          Crucible::Tests::BaseSuite.fhir_resources.each do | klass |
+          fhir_resources.each do | klass |
             @resource_class = klass
             results.merge!({"SearchTest_#{@resource_class.name.demodulize}" => execute_test_methods})
           end
