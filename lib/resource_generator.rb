@@ -94,6 +94,7 @@ module Crucible
             gen = SecureRandom.base64
           elsif "#{namespace}::RESOURCES".constantize.include?(type)
             if embedded > 0 || ((meta['binding'] || meta['min'] != 0) && EMBEDDED_LOOP_GUARD + embedded > 0)
+              type = 'Patient' if type == 'Resource' # can't use abstract "Resource" here, or can??
               gen = generate_child(type, namespace, embedded-1)
             end
           elsif "#{namespace}::TYPES".constantize.include?(type)
