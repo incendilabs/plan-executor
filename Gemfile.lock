@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/incendilabs/fhir_dstu2_models.git
-  revision: f0404c1eb927b95a892b91e06726ce32bfd9c1f4
+  revision: a05f3a9716fb797c2b8726d42ab2fa6eff930670
   specs:
     fhir_dstu2_models (1.0.10)
       bcp47 (>= 0.3)
@@ -144,13 +144,12 @@ GEM
     unf (0.1.4)
       unf_ext
     unf_ext (0.0.7.7)
-    unf_ext (0.0.7.7-x64-mingw32)
     unicode_utils (1.4.0)
     webmock (3.9.3)
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
-    zeitwerk (2.4.0)
+    zeitwerk (2.4.1)
 
 PLATFORMS
   ruby
