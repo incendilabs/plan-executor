@@ -35,7 +35,14 @@ module Crucible
         if resource.class.constants.include? :MULTIPLE_TYPES
           multiples = resource.class::MULTIPLE_TYPES.keys
           all_multiples = multiples.map{|k| resource.class::MULTIPLE_TYPES[k].map{|d| "#{k}#{d.titleize.split.join}" }}.flatten
-          selected_multiples = multiples.map{|k| "#{k}#{resource.class::MULTIPLE_TYPES[k].sample.titleize.split.join}" }
+
+          # In DSTU2 Quantity sometimes can't be used directly, but the concrete type must be used instead.
+          # For example, Condition.abatementQuantity should be of type Age, but there's no such type
+          # definition in the DSTU2 models. So here, we're just skipping Quantity choice,
+          # and selecting some other (probably primitive) type for the multi-choice FHIR property.
+          selected_multiples = multiples.map { |k| "#{k}#{resource.class::MULTIPLE_TYPES[k].sample.titleize.split.join}" } if namespace != 'FHIR::DSTU2'
+          selected_multiples = multiples.map { |k| "#{k}#{resource.class::MULTIPLE_TYPES[k].reject { |t| t == 'Quantity' }.sample.titleize.split.join}" } if namespace == 'FHIR::DSTU2'
+
           unselected_multiples = all_multiples - selected_multiples
         end
         unselected_multiples.each do |key|
