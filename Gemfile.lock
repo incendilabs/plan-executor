@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/incendilabs/fhir_dstu2_models.git
-  revision: a05f3a9716fb797c2b8726d42ab2fa6eff930670
+  revision: 66c58438d323f634116dc937446d42d9b4356687
   specs:
     fhir_dstu2_models (1.0.10)
       bcp47 (>= 0.3)
