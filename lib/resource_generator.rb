@@ -205,16 +205,32 @@ module Crucible
       end
 
       # Default system/code are for SNOMED "Obese (finding)"
-      def self.minimal_condition(system='http://snomed.info/sct',code='414915002',patientId=nil, namespace = FHIR)
+      def self.minimal_condition(system='http://snomed.info/sct',code='414915002',patientId=nil, namespace = FHIR, patientRef=nil)
         resource = namespace.const_get(:Condition).new
-        resource.subject = namespace.const_get(:Reference).new
-        if patientId
-          resource.subject.reference = "Patient/#{patientId}"
+        if resource.is_a?(FHIR::DSTU2::Condition)
+          resource.patient = namespace.const_get(:Reference).new
+          if patientId
+            resource.patient.reference = "Patient/#{patientId}"
+          else
+            resource.patient.display = 'Patient'
+          end
+          if (patientRef)
+            resource.patient.reference = patientRef
+          end
         else
-          resource.subject.display = 'Patient'
+          resource.subject = namespace.const_get(:Reference).new
+          if patientId
+            resource.subject.reference = "Patient/#{patientId}"
+          else
+            resource.subject.display = 'Patient'
+          end
+          if (patientRef)
+            resource.subject.reference = patientRef
+          end
         end
         resource.code = minimal_codeableconcept(system,code, namespace)
         resource.verificationStatus = 'confirmed'
+
         if resource.is_a?(FHIR::Condition)
           # They changed it from `code` data type to `CodeableConcept` in `R4`
           resource.verificationStatus = minimal_codeableconcept(

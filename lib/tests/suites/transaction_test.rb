@@ -61,7 +61,7 @@ module Crucible
           validates resource: nil, methods: ['transaction-system']
         }
 
-        @patient0 = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Transaction')
+        @patient0 = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Transaction', version_namespace)
         patient0_id = SecureRandom.uuid
         patient0_uri = "urn:uuid:#{patient0_id}"
 
@@ -72,8 +72,7 @@ module Crucible
         @obs0b = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',200,'kg',patient0_id)
         @obs0b.subject.reference = patient0_uri
         # obesity
-        @condition0 = ResourceGenerator.minimal_condition('http://snomed.info/sct','414915002',patient0_id)
-        @condition0.subject.reference = patient0_uri
+        @condition0 = ResourceGenerator.minimal_condition('http://snomed.info/sct','414915002',patient0_id, version_namespace, patient0_uri)
 
         @client.begin_transaction
         @client.add_transaction_request('POST',nil,@patient0).fullUrl = patient0_uri
@@ -106,7 +105,11 @@ module Crucible
         reply = @client.read(get_resource(:Observation), @obs0b.id)
         assert( (reply.resource.subject.reference.ends_with?(@patient0.id) rescue false), "Observation doesn't correctly reference Patient/#{@patient0.id}")
         reply = @client.read(get_resource(:Condition), @condition0.id)
-        assert( (reply.resource.subject.reference.ends_with?(@patient0.id) rescue false), "Condition doesn't correctly reference Patient/#{@patient0.id}")
+        if fhir_version == :dstu2
+          assert( (reply.resource.patient.reference.ends_with?(@patient0.id) rescue false), "Condition doesn't correctly reference Patient/#{@patient0.id}")
+        else
+          assert( (reply.resource.subject.reference.ends_with?(@patient0.id) rescue false), "Condition doesn't correctly reference Patient/#{@patient0.id}")
+        end
 
         @created_patient_record = true
       end
@@ -129,7 +132,7 @@ module Crucible
         skip 'Could not create patient in XFER0.' unless @created_patient_record
 
         # patient has gained weight
-        @obs1 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',250,'kg',@patient0.id)
+        @obs1 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',250,'kg',@patient0.id, version_namespace)
 
         @client.begin_transaction
         @client.add_transaction_request('POST',nil,@patient0,"identifier=#{@patient0.identifier.first.system}|#{@patient0.identifier.first.value}").fullUrl = "urn:uuid:#{SecureRandom.uuid}"
@@ -165,9 +168,13 @@ module Crucible
         skip 'Could not create patient in XFER0.' unless @created_patient_record
 
         # weight
-        @obs2 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',100,'kg',@patient0.id)
+        @obs2 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',100,'kg',@patient0.id, version_namespace)
         # obesity has been refuted
-        @condition0.subject.reference = "Patient/#{@patient0.id}"
+        if fhir_version == :dstu2
+          @condition0.patient.reference = "Patient/#{@patient0.id}"
+        else
+          @condition0.subject.reference = "Patient/#{@patient0.id}"
+        end
         @condition0.clinicalStatus = 'resolved'
         @condition0.verificationStatus = 'refuted'
         @condition0.abatementString = 'Abated at unknown date'
@@ -204,7 +211,7 @@ module Crucible
         }
         skip 'Could not create patient in XFER0.' unless @created_patient_record
 
-        @patient1 = ResourceGenerator.minimal_patient(@patient0.identifier.first.value,@patient0.name.first.given.first)
+        @patient1 = ResourceGenerator.minimal_patient(@patient0.identifier.first.value,@patient0.name.first.given.first, version_namespace)
         reply = @client.create @patient1
         assert_response_ok(reply)
         @patient1.id = (reply.resource.try(:id) || reply.id)
@@ -236,9 +243,9 @@ module Crucible
         skip 'Could not create patient in XFER0.' unless @created_patient_record
 
         # height observation
-        @obs3 = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',177,'cm',@patient0.id)
+        @obs3 = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',177,'cm',@patient0.id, version_namespace)
         # weight observation
-        @obs4 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',105,'kg',@patient0.id)
+        @obs4 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',105,'kg',@patient0.id, version_namespace)
         # give this *weight* observation the ID of the *height* observation created in XFER1
         @obs4.id = @obs0a.id
 
@@ -324,7 +331,11 @@ module Crucible
           # if class is Observation check subject
           assert( (reply.resource.entry[index].resource.subject==@transferPatientId), "Observation.subject Patient reference was not rewritten." ) if reply.resource.entry[index].resource.class==get_resource(:Observation)
           # if class is Condition check patient
-          assert( (reply.resource.entry[index].resource.subject==@transferPatientId), "Condition.patient reference was not rewritten." ) if reply.resource.entry[index].resource.class==get_resource(:Condition)
+          if fhir_version == :dstu2
+            assert( (reply.resource.entry[index].resource.patient==@transferPatientId), "Condition.patient reference was not rewritten." ) if reply.resource.entry[index].resource.class==get_resource(:Condition)
+          else
+            assert( (reply.resource.entry[index].resource.subject==@transferPatientId), "Condition.patient reference was not rewritten." ) if reply.resource.entry[index].resource.class==get_resource(:Condition)
+          end
         end
       end
 
@@ -409,10 +420,10 @@ module Crucible
           validates resource: nil, methods: ['batch-system']
         }
 
-        @batch_patient = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Batch')
+        @batch_patient = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Batch', version_namespace)
         @batch_patient_id = "urn:uuid:#{SecureRandom.uuid}" # assign an id so related resources can reference the patient
         # height
-        @batch_obs = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',900,'cm',@batch_patient_id)
+        @batch_obs = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',900,'cm',@batch_patient_id, version_namespace)
         @batch_obs.subject.reference = @batch_patient_id
 
         @client.begin_batch
@@ -450,15 +461,15 @@ module Crucible
           validates resource: nil, methods: ['batch-system']
         }
 
-        @batch_patient_2 = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Batch')
+        @batch_patient_2 = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Batch', version_namespace)
         reply = @client.create @batch_patient_2
         assert_response_ok(reply)
         @batch_patient_2.id = (reply.resource.try(:id) || reply.id)
 
         # height
-        @batch_obs_2 = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',300,'cm',@batch_patient_2.id)
+        @batch_obs_2 = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',300,'cm',@batch_patient_2.id, version_namespace)
         # weight
-        @batch_obs_3 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',500,'kg',@batch_patient_2.id)
+        @batch_obs_3 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',500,'kg',@batch_patient_2.id, version_namespace)
 
         @client.begin_batch
         @client.add_batch_request('POST',nil,@batch_obs_2).fullUrl = "urn:uuid:#{SecureRandom.uuid}"
