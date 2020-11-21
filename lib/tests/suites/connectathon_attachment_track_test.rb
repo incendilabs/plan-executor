@@ -58,16 +58,17 @@ module Crucible
             requires resource: 'Practitioner', methods: ['create']
             requires resource: 'Communication', methods: ['create']
           }
-          comm = FHIR::Communication.new()
+          comm = FHIR::STU3::Communication.new()
           comm.subject = [@records[:patient].to_reference]
           comm.recipient = [@records[:practitioner].to_reference]
+          comm.status = 'preparation'
 
-          comm_att = FHIR::Attachment.new()
+          comm_att = FHIR::STU3::Attachment.new()
           comm_att.contentType = @mime_types[att_type]
           comm_att.data = base64_encoded(att_type)
           comm_att.title = @attachments[att_type]
 
-          payload = FHIR::Communication::Payload.new
+          payload = FHIR::STU3::Communication::Payload.new
           payload.contentAttachment = [comm_att]
 
           comm.payload = payload
@@ -94,24 +95,25 @@ module Crucible
               }
             }
           }
-          reply = @client.search(FHIR::CommunicationRequest, options)
+          reply = @client.search(FHIR::STU3::CommunicationRequest, options)
           assert_response_ok(reply)
           assert_bundle_response(reply)
           comm_req = reply.resource.entry.sample.try(:resource)
 
           assert comm_req, 'No CommunicationRequest returned from server'
 
-          comm = FHIR::Communication.new()
+          comm = FHIR::STU3::Communication.new()
           comm.subject = [comm_req.subject]
           comm.recipient = [comm_req.sender]
           comm.basedOn = [comm_req.to_reference]
+          comm.status = 'preparation'
 
-          comm_att = FHIR::Attachment.new()
+          comm_att = FHIR::STU3::Attachment.new()
           comm_att.contentType = @mime_types[att_type]
           comm_att.data = base64_encoded(att_type)
           comm_att.title = @attachments[att_type]
 
-          payload = FHIR::Communication::Payload.new
+          payload = FHIR::STU3::Communication::Payload.new
           payload.contentAttachment = [comm_att]
 
           comm.payload = payload
@@ -122,7 +124,7 @@ module Crucible
       private
 
       def base64_encoded(type)
-        Base64.encode64(File.read(File.join(Crucible::Generator::Resources::FIXTURE_DIR, "attachment", "#{@attachments[type]}")))
+        Base64.encode64(File.read(File.join(Crucible::Generator::Resources::FIXTURE_DIR, "stu3", "attachment", "#{@attachments[type]}")))
       end
 
       def create_object(obj, obj_sym)
