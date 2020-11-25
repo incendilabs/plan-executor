@@ -87,7 +87,7 @@ module Crucible
           }
         }
 
-        reply = @client.search(FHIR::Observation, options)
+        reply = @client.search(FHIR::STU3::Observation, options)
         assert_response_ok(reply)
 
         ext = reply.resource.entry.find {|entry| entry.resource.extension.find { |exten| exten.url == "http://hl7.org/fhir/StructureDefinition/observation-geneticsGenomicSourceClass" } }
@@ -133,14 +133,14 @@ module Crucible
         diag_report.specimen = @records[:family_specimen].to_reference
         create_object(diag_report, :family_report)
 
-        reply = @client.read FHIR::FamilyMemberHistory, @records[:family_member_history].id
+        reply = @client.read FHIR::STU3::FamilyMemberHistory, @records[:family_member_history].id
         assert_response_ok(reply)
 
         ext = reply.resource.extension.find { |exten| exten.url == 'http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-observation'}
 
         assert ext, "No Family History extension found"
 
-        reply = @client.read FHIR::Observation, ext.valueReference.reference.split("/")[1]
+        reply = @client.read FHIR::STU3::Observation, ext.valueReference.reference.split("/")[1]
         assert_response_ok(reply)
 
         assert @records[:family_observation].equals?(reply.resource, ['meta']), "Observation doesn't match the stored Observation; difference is: #{@records[:family_observation].mismatch(reply.resource, ['meta'])}"
@@ -176,7 +176,7 @@ module Crucible
           }
         }
 
-        reply = @client.search(FHIR::Observation, options)
+        reply = @client.search(FHIR::STU3::Observation, options)
         assert_response_ok(reply)
 
         assert reply.resource.get_by_id(@records[:dw_obs].id), "No Observation found for that patient"
@@ -204,7 +204,7 @@ module Crucible
 
         create_object(dr_hla, :dr_hla)
 
-        reply = @client.read(FHIR::DiagnosticReport, @records[:dr_hla].id)
+        reply = @client.read(FHIR::STU3::DiagnosticReport, @records[:dr_hla].id)
         assert_response_ok(reply)
 
         assert @records[:dr_hla].equals?(reply.resource, ['meta', 'text', 'narrative']), "DiagnosticReport doesn't match the stored DiagnosticReport; difference is: #{@records[:dr_hla].mismatch(reply.resource, ['meta', 'text', 'narrative'])}"
@@ -230,7 +230,7 @@ module Crucible
         dr.specimen = [@records[:family_specimen].to_reference]
         create_object(dr, :dr_pathreport)
 
-        reply = @client.read(FHIR::DiagnosticReport, @records[:dr_pathreport].id)
+        reply = @client.read(FHIR::STU3::DiagnosticReport, @records[:dr_pathreport].id)
         assert_response_ok(reply)
 
         assert reply.resource.equals?(@records[:dr_pathreport], ['text', 'meta', 'lastUpdated']), "DiagnosticReport returned does not match DiagnosticReport sent, mismatch in #{reply.resource.mismatch(@records[:dr_pathreport], ['text', 'meta', 'lastUpdated'])}"
@@ -256,7 +256,7 @@ module Crucible
           }
         }
 
-        reply = @client.search(FHIR::Sequence, options)
+        reply = @client.search(FHIR::STU3::Sequence, options)
         assert_response_ok(reply)
 
         entries = reply.resource.entry.collect { |e| e.resource if e.resource.quality }
