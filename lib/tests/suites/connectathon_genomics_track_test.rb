@@ -129,7 +129,8 @@ module Crucible
         diag_report = @resources.diagnostic_familyhistory
         diag_report.result = @records[:family_observation].to_reference
         diag_report.subject = @records[:family_patient].to_reference
-        diag_report.performer = @records[:practitioner].to_reference
+        diag_report.performer = [ FHIR::STU3::DiagnosticReport::Performer.new ]
+        diag_report.performer.first.actor = @records[:practitioner].to_reference
         diag_report.specimen = @records[:family_specimen].to_reference
         create_object(diag_report, :family_report)
 
@@ -199,7 +200,8 @@ module Crucible
 
         dr_hla = @resources.diagnosticreport_hltyping
         dr_hla.subject = @records[:family_patient].to_reference
-        dr_hla.performer = [@records[:practitioner].to_reference]
+        dr_hla.performer = [ FHIR::STU3::DiagnosticReport::Performer.new ]
+        dr_hla.performer.first.actor = @records[:practitioner].to_reference
         dr_hla.specimen = [@records[:family_specimen].to_reference]
 
         create_object(dr_hla, :dr_hla)
@@ -226,7 +228,8 @@ module Crucible
 
         dr = @resources.diagnosticreport_pathology
         dr.subject = @records[:family_patient].to_reference
-        dr.performer = [@records[:practitioner].to_reference]
+        dr.performer = [ FHIR::STU3::DiagnosticReport::Performer.new ]
+        dr.performer.first.actor = @records[:practitioner].to_reference
         dr.specimen = [@records[:family_specimen].to_reference]
         create_object(dr, :dr_pathreport)
 
