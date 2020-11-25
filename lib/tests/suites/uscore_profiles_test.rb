@@ -35,7 +35,7 @@ module Crucible
 
       def teardown
         # delete resources
-        @client.destroy(FHIR::Patient, @patient.id) if @patient && !@patient.id.nil?
+        @client.destroy(FHIR::STU3::Patient, @patient.id) if @patient && !@patient.id.nil?
       end
 
       # Check CapabilityStatement for USCore Profiles
@@ -298,9 +298,9 @@ module Crucible
         patient.animal = Crucible::Tests::USCoreResourceGenerator.minimal_animal
         reply = @client.validate(patient,{profile_uri: patient.meta.profile.first})
         assert_response_ok(reply)
-        reply_resource = @client.parse_reply(FHIR::OperationOutcome, @client.default_format, reply)
+        reply_resource = @client.parse_reply(FHIR::STU3::OperationOutcome, @client.default_format, reply)
         reply.resource = reply_resource
-        assert_resource_type(reply,FHIR::OperationOutcome)
+        assert_resource_type(reply,FHIR::STU3::OperationOutcome)
         failed = reply.resource.issue.any?{|x|['fatal','error'].include?(x.severity) || x.code=='invalid' }
         assert(failed,'The server failed to reject an invalid USCore-Patient.')
       end
@@ -327,7 +327,7 @@ module Crucible
               :parameters => nil
             }
           }
-          reply = @client.search(FHIR::Patient, options)
+          reply = @client.search(FHIR::STU3::Patient, options)
           assert_response_ok(reply)
           assert_bundle_response(reply)
           resource = reply.resource.entry.map{|x|x.resource}
@@ -357,7 +357,7 @@ module Crucible
               :parameters => nil
             }
           }
-          reply = @client.search(FHIR::Encounter, options)
+          reply = @client.search(FHIR::STU3::Encounter, options)
           assert_response_ok(reply)
           assert_bundle_response(reply)
           resource = reply.resource.entry.map{|x|x.resource}
@@ -377,7 +377,7 @@ module Crucible
       # BUT THE USCore IMPLEMENTATION GUIDE DOES NOT REQUIRE CREATE/WRITE SUPPORT.
       # TRY TO VALIDATE THESE FIXTURES... BUT VALIDATE OPERATION IS NOT REQUIRED BY USCore IG EITHER.
       # TRY TO SEARCH FOR USCore PROFILED RESOURCES... AND THEN HAVE OUR CLIENT VALIDATE THEM, IF THEY EXIST.
-      resources = Crucible::Generator::Resources.new
+      resources = Crucible::Generator::Resources.new(:stu3)
       uscore_conformance = resources.uscore_conformance
       uscore_conformance.rest.first.resource.each_with_index do |uscore_resource,index|
 
@@ -392,7 +392,7 @@ module Crucible
             validates resource: "#{uscore_resource.type}", methods: ['search']
           }
 
-          klass = "FHIR::#{uscore_resource.type}".constantize
+          klass = "FHIR::STU3::#{uscore_resource.type}".constantize
           options = {
             :search => {
               :parameters => {

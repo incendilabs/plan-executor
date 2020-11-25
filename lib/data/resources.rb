@@ -8,6 +8,7 @@ module Crucible
         @fhir_version = fhir_version
         @namespace = FHIR
         @namespace = FHIR::DSTU2 if @fhir_version == :dstu2
+        @namespace = FHIR::STU3 if @fhir_version == :stu3
       end
 
       def example_patient
