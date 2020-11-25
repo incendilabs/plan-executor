@@ -18,6 +18,9 @@ module Crucible
       end
 
       def setup
+
+        skip "TODO: implement financial data processing"
+
         @resources = Crucible::Generator::Resources.new(fhir_version)
 
         @simple = @resources.simple_claim
@@ -39,7 +42,7 @@ module Crucible
 
         @patient = @resources.minimal_patient
         @patient.id = nil
-        @patient.identifier = [FHIR::Identifier.new]
+        @patient.identifier = [FHIR::STU3::Identifier.new]
         @patient.identifier[0].value = SecureRandom.urlsafe_base64
         result = @client.create(@patient)
         assert_response_ok(result)
@@ -80,17 +83,17 @@ module Crucible
       end
 
       def teardown
-        @client.destroy(FHIR::Claim, @simple_id) if !@simple_id.nil?
-        @client.destroy(FHIR::Claim, @preauth_id) if !@preauth_id.nil?
-        @client.destroy(FHIR::Claim, @average_id) if !@average_id.nil?
-        @client.destroy(FHIR::ClaimResponse, @simple_response_id) if !@simple_response_id.nil?
-        @client.destroy(FHIR::ClaimResponse, @average_response_id) if !@average_response_id.nil?
-        @client.destroy(FHIR::ClaimResponse, @preauth_response_id) if !@preauth_response_id.nil?
-        @client.destroy(FHIR::Patient, @patient_id) if !@patient_id.nil?
-        @client.destroy(FHIR::Organization, @organization_1_id) if !@organization_1_id.nil?
-        @client.destroy(FHIR::Organization, @organization_2_id) if !@organization_2_id.nil?
-        @client.destroy(FHIR::EligibilityRequest, @er_id) if !@er_id.nil?
-        @client.destroy(FHIR::Communication, @preauth_communication_id) if !@preauth_communication_id.nil?
+        @client.destroy(FHIR::STU3::Claim, @simple_id) if !@simple_id.nil?
+        @client.destroy(FHIR::STU3::Claim, @preauth_id) if !@preauth_id.nil?
+        @client.destroy(FHIR::STU3::Claim, @average_id) if !@average_id.nil?
+        @client.destroy(FHIR::STU3::ClaimResponse, @simple_response_id) if !@simple_response_id.nil?
+        @client.destroy(FHIR::STU3::ClaimResponse, @average_response_id) if !@average_response_id.nil?
+        @client.destroy(FHIR::STU3::ClaimResponse, @preauth_response_id) if !@preauth_response_id.nil?
+        @client.destroy(FHIR::STU3::Patient, @patient_id) if !@patient_id.nil?
+        @client.destroy(FHIR::STU3::Organization, @organization_1_id) if !@organization_1_id.nil?
+        @client.destroy(FHIR::STU3::Organization, @organization_2_id) if !@organization_2_id.nil?
+        @client.destroy(FHIR::STU3::EligibilityRequest, @er_id) if !@er_id.nil?
+        @client.destroy(FHIR::STU3::Communication, @preauth_communication_id) if !@preauth_communication_id.nil?
       end
 
       test 'C13F_1', 'Register an EligibilityRequest' do
@@ -108,7 +111,7 @@ module Crucible
         assert_response_ok(reply)
         @er_id = reply.id
 
-        warning { assert @er.equals?(reply.resource), 'The server did not correctly preserve the EligibilityRequest data.' }
+        warning { assert @er.equals?(reply.resource, [:meta]), 'The server did not correctly preserve the EligibilityRequest data.' }
 
       end
 
@@ -136,7 +139,7 @@ module Crucible
         sleep(5)
 
         # @client.use_format_param = true
-        reply = @client.search(FHIR::EligibilityResponse, options)
+        reply = @client.search(FHIR::STU3::EligibilityResponse, options)
 
         assert_response_ok(reply)
         assert (reply.resource.total > 0), 'The server did not report any EligibilityResponses for the submitted EligibilityResource.'
@@ -180,7 +183,7 @@ module Crucible
         elsif !reply.body.nil?
           begin
             @preauth_response = FHIR.from_contents(reply.body)
-            if cr.class==FHIR::ClaimResponse
+            if cr.class==FHIR::STU3::ClaimResponse
               # Response is ClaimResponse
               @preauth_response_id = @preauth_response.id
             else
@@ -209,7 +212,7 @@ module Crucible
             }
           }
           @client.use_format_param = true
-          reply = @client.search(FHIR::ClaimResponse, options)
+          reply = @client.search(FHIR::STU3::ClaimResponse, options)
           assert_response_ok(reply)
           assert_bundle_response(reply)
           assert (reply.resource.total > 0), 'The server does not have a record of the submitted preauthorization.'
@@ -227,18 +230,18 @@ module Crucible
 
         # create an communication that references additional information for the claim
 
-        @preauth_communication = FHIR::Communication.new()
+        @preauth_communication = FHIR::STU3::Communication.new()
         # Associate with the claim using the topic
         # This might not be the appopriate place to do this
-        @preauth_communication.topic = [ FHIR::Reference.new ]
+        @preauth_communication.topic = [ FHIR::STU3::Reference.new ]
         @preauth_communication.topic[0].reference = "Claim/#{@preauth_id}"
 
-        attachment = FHIR::Attachment.new
+        attachment = FHIR::STU3::Attachment.new
         attachment.data = File.read(File.join(Crucible::Generator::Resources::FIXTURE_DIR, 'attachment', 'ccda_pdf_base64.txt'))
         # attachment.data = 'SGVsbG8='
         attachment.contentType = 'application/pdf'
 
-        payload = FHIR::Communication::Payload.new
+        payload = FHIR::STU3::Communication::Payload.new
         payload.contentAttachment = attachment
 
         @preauth_communication.payload = [payload]
@@ -283,7 +286,7 @@ module Crucible
         elsif !reply.body.nil?
           begin
             cr = FHIR.from_contents(reply.body)
-            if cr.class==FHIR::ClaimResponse
+            if cr.class==FHIR::STU3::ClaimResponse
               # Response is ClaimResponse
               @simple_response_id = cr.id
               @simple_id = cr.request.reference if cr.request
@@ -328,7 +331,7 @@ module Crucible
         elsif !reply.body.nil?
           begin
             cr = FHIR.from_contents(reply.body)
-            if cr.class==FHIR::ClaimResponse
+            if cr.class==FHIR::STU3::ClaimResponse
               # Response is ClaimResponse
               @average_response_id = cr.id
               @average_id = cr.request.reference if cr.request
@@ -360,9 +363,9 @@ module Crucible
           validates resource: 'Claim', methods: ['read']
         }
 
-        reply = @client.read(FHIR::Claim,@simple_id)
+        reply = @client.read(FHIR::STU3::Claim,@simple_id)
         assert_response_ok(reply)
-        assert_resource_type(reply,FHIR::Claim)
+        assert_resource_type(reply,FHIR::STU3::Claim)
         reply.resource.insurance.each do |insurance|
           assert(!insurance.try(:claimResponse).try(:reference).nil?,'Claim does not reference a ClaimResponse.',reply.body)
         end
@@ -385,9 +388,9 @@ module Crucible
           validates resource: 'Claim', methods: ['read']
         }
 
-        reply = @client.read(FHIR::Claim,@average_id)
+        reply = @client.read(FHIR::STU3::Claim,@average_id)
         assert_response_ok(reply)
-        assert_resource_type(reply,FHIR::Claim)
+        assert_resource_type(reply,FHIR::STU3::Claim)
         reply.resource.insurance.each do |insurance|
           assert(!insurance.try(:claimResponse).try(:reference).nil?,'Claim does not reference a ClaimResponse.',reply.body)
         end
@@ -426,7 +429,7 @@ module Crucible
           }
         }
         @client.use_format_param = true
-        reply = @client.search(FHIR::ClaimResponse, options)
+        reply = @client.search(FHIR::STU3::ClaimResponse, options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
         assert (reply.resource.total > 0), 'The server did not report any results.'
@@ -463,7 +466,7 @@ module Crucible
           }
         }
         @client.use_format_param = true
-        reply = @client.search(FHIR::ClaimResponse, options)
+        reply = @client.search(FHIR::STU3::ClaimResponse, options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
         assert (reply.resource.total > 0), 'The server did not report any results.'
@@ -499,7 +502,7 @@ module Crucible
           }
         }
         @client.use_format_param = true
-        reply = @client.search(FHIR::ClaimResponse, options)
+        reply = @client.search(FHIR::STU3::ClaimResponse, options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
         assert (reply.resource.total > 0), 'The server did not report any results.'
@@ -537,7 +540,7 @@ module Crucible
           }
         }
         @client.use_format_param = true
-        reply = @client.search(FHIR::ClaimResponse, options)
+        reply = @client.search(FHIR::STU3::ClaimResponse, options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
         assert (reply.resource.total > 0), 'The server did not report any results.'
@@ -574,7 +577,7 @@ module Crucible
           }
         }
         @client.use_format_param = true
-        reply = @client.search(FHIR::ClaimResponse, options)
+        reply = @client.search(FHIR::STU3::ClaimResponse, options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
         assert (reply.resource.total > 0), 'The server did not report any results.'
@@ -610,7 +613,7 @@ module Crucible
           }
         }
         @client.use_format_param = true
-        reply = @client.search(FHIR::ClaimResponse, options)
+        reply = @client.search(FHIR::STU3::ClaimResponse, options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
         assert (reply.resource.total > 0), 'The server did not report any results.'
