@@ -337,7 +337,7 @@ module Crucible
           }
         }
         @client.use_format_param = false
-        reply = @client.search(FHIR::Patient, options)
+        reply = @client.search(FHIR::STU3::Patient, options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
         assert (reply.resource.total > 0), 'The server did not report any results.'
