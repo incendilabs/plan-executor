@@ -71,10 +71,10 @@ module Crucible
           requires resource: 'ProcedureRequest', methods: ['create']
           validates resource: 'ProcedureRequest', methods: ['create']
         }
-        create_procedure_request('diagnostic_request/do-100', :diag_order_1)
-        create_procedure_request('diagnostic_request/do-200', :diag_order_2, :spec_uslab)
-        create_procedure_request('diagnostic_request/do-300', :diag_order_3, :spec_uslab)
-        create_procedure_request('diagnostic_request/do-400', :diag_order_4, :spec_400)
+        create_procedure_request('stu3/diagnostic_request/do-100', :diag_order_1)
+        create_procedure_request('stu3/diagnostic_request/do-200', :diag_order_2, :spec_uslab)
+        create_procedure_request('stu3/diagnostic_request/do-300', :diag_order_3, :spec_uslab)
+        create_procedure_request('stu3/diagnostic_request/do-400', :diag_order_4, :spec_400)
       end
 
       test 'C12T11_4', 'Submit DiagnosticReport, Specimen, and Observation resources' do
@@ -96,10 +96,10 @@ module Crucible
         skip 'Diagnostic Order 3 not successfully created in startup.' if @records[:diag_order_3].nil?
         skip 'Diagnostic Order 4 not successfully created in startup.' if @records[:diag_order_4].nil?
 
-        create_diagnostic_report(:spec_100, ['observation/obs-100', 'observation/obs-101'], 'diagnostic_report/dr-100', :diag_report_1, @records[:diag_order_1])
-        create_diagnostic_report(:spec_uslab, ['observation/obs-200'], 'diagnostic_report/dr-200', :diag_report_2, @records[:diag_order_2])
-        create_diagnostic_report(:spec_uslab, ['observation/obs-300', 'observation/obs-301', 'observation/obs-302', 'observation/obs-303', 'observation/obs-304'], 'diagnostic_report/dr-300', :diag_report_3, @records[:diag_order_3])
-        create_diagnostic_report(:spec_400, ['observation/obs-400', 'observation/obs-401', 'observation/obs-402', 'observation/obs-403', 'observation/obs-404', 'observation/obs-405', 'observation/obs-406', 'observation/obs-407', 'observation/obs-408'], 'diagnostic_report/dr-400', :diag_report_4, @records[:diag_order_4])
+        create_diagnostic_report(:spec_100, ['stu3/observation/obs-100', 'stu3/observation/obs-101'], 'stu3/diagnostic_report/dr-100', :diag_report_1, @records[:diag_order_1])
+        create_diagnostic_report(:spec_uslab, ['stu3/observation/obs-200'], 'stu3/diagnostic_report/dr-200', :diag_report_2, @records[:diag_order_2])
+        create_diagnostic_report(:spec_uslab, ['stu3/observation/obs-300', 'stu3/observation/obs-301', 'stu3/observation/obs-302', 'stu3/observation/obs-303', 'stu3/observation/obs-304'], 'stu3/diagnostic_report/dr-300', :diag_report_3, @records[:diag_order_3])
+        create_diagnostic_report(:spec_400, ['stu3/observation/obs-400', 'stu3/observation/obs-401', 'stu3/observation/obs-402', 'stu3/observation/obs-403', 'stu3/observation/obs-404', 'stu3/observation/obs-405', 'stu3/observation/obs-406', 'stu3/observation/obs-407', 'stu3/observation/obs-408'], 'stu3/diagnostic_report/dr-400', :diag_report_4, @records[:diag_order_4])
       end
 
       test 'C12T11_5', 'Retrieve DiagnosticReport' do
@@ -146,7 +146,7 @@ module Crucible
       def create_procedure_request(fixture_path, order_name, specimen_name = nil)
         diag_order = @resources.load_fixture(fixture_path, :xml)
         diag_order.subject = @records[:patient].to_reference
-        diag_order.requester = FHIR::ProcedureRequest::Requester.new unless diag_order.requester
+        diag_order.requester = FHIR::STU3::ProcedureRequest::Requester.new unless diag_order.requester
         diag_order.requester.agent = @records[:provider].to_reference
         diag_order.supportingInfo = [@records[specimen_name].to_reference] if specimen_name
 
@@ -168,7 +168,7 @@ module Crucible
         diag_report.subject = @records[:patient].to_reference
         diag_report.issued = DateTime.now.iso8601
         diag_report.effectiveDateTime = DateTime.now.iso8601
-        diag_report.performer = [ FHIR::DiagnosticReport::Performer.new ]
+        diag_report.performer = [ FHIR::STU3::DiagnosticReport::Performer.new ]
         diag_report.performer.first.actor = @records[:performer].to_reference
         diag_report.basedOn = [diag_order.to_reference]
         diag_report.specimen = [@records[specimen_name].to_reference]
@@ -189,7 +189,7 @@ module Crucible
 
       def get_diagnostic_report(dr_name)
         assert @records[dr_name], "No DiagnosticReport with that name present"
-        reply = @client.read FHIR::DiagnosticReport, @records[dr_name].id
+        reply = @client.read FHIR::STU3::DiagnosticReport, @records[dr_name].id
         assert_response_ok(reply)
         assert reply.resource.equals?(@records[dr_name], ['text', 'meta', 'presentedForm', 'extension']), "DiagnosticReport/#{@records[dr_name].id} doesn't match retrieved DiagnosticReport. Mismatched fields: #{reply.resource.mismatch(@records[dr_name], ['text', 'meta', 'presentedForm', 'extension'])}"
       end
@@ -197,7 +197,7 @@ module Crucible
       def update_diagnostic_request(order_name)
         assert @records[order_name], "No ProcedureRequest with that name present"
         
-        reply = @client.read FHIR::ProcedureRequest, @records[order_name].id
+        reply = @client.read FHIR::STU3::ProcedureRequest, @records[order_name].id
         
         assert_response_ok(reply)
         assert reply.resource.equals?(@records[order_name], ['text', 'meta', 'presentedForm', 'extension']), "Reply did not match ProcedureRequest/#{@records[order_name].id}. Mismatched fields: #{reply.resource.mismatch(@records[order_name], ['text', 'meta', 'presentedForm', 'extension'])}"
@@ -208,7 +208,7 @@ module Crucible
         
         assert_response_ok(reply)
 
-        reply = @client.read FHIR::ProcedureRequest, @records[order_name].id
+        reply = @client.read FHIR::STU3::ProcedureRequest, @records[order_name].id
         
         assert_response_ok(reply)
         assert reply.resource.equals?(@records[order_name], ['text', 'meta', 'presentedForm', 'extension']), "Reply did not match #{@records[order_name]}. Mismatched fields: #{reply.resource.mismatch(@records[order_name], ['text', 'meta', 'presentedForm', 'extension'])}"
