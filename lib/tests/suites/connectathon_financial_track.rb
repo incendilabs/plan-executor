@@ -19,8 +19,6 @@ module Crucible
 
       def setup
 
-        skip "TODO: implement financial data processing"
-
         @resources = Crucible::Generator::Resources.new(fhir_version)
 
         @simple = @resources.simple_claim
@@ -106,6 +104,8 @@ module Crucible
           validates resource: 'EligibilityRequest', methods: ['create']
         }
 
+        skip "TODO: implement financial data processing"
+
         reply = @client.create(@er)
 
         assert_response_ok(reply)
@@ -125,6 +125,8 @@ module Crucible
           requires resource: 'EligibilityRequest', methods: ['search']
           validates resource: 'EligibilityRequest', methods: ['search']
         }
+
+        skip "TODO: implement financial data processing"
 
         options = {
           :search => {
@@ -168,6 +170,8 @@ module Crucible
           validates resource: 'Claim', methods: ['create']
           validates resource: 'ClaimResponse', methods: ['search']
         }
+
+        skip "TODO: implement financial data processing"
 
         reply = @client.create(@preauth)
         assert_response_ok(reply)
@@ -272,6 +276,8 @@ module Crucible
           validates resource: 'Claim', methods: ['create']
         }
 
+        skip "TODO: implement financial data processing"
+
         reply = @client.create(@simple)
         assert_response_ok(reply)
         @simple_id = reply.id
@@ -316,6 +322,8 @@ module Crucible
           requires resource: 'Claim', methods: ['create']
           validates resource: 'Claim', methods: ['create']
         }
+
+        skip "TODO: implement financial data processing"
 
         reply = @client.create(@average)
         assert_response_ok(reply)
@@ -363,6 +371,8 @@ module Crucible
           validates resource: 'Claim', methods: ['read']
         }
 
+        skip "TODO: implement financial data processing"
+
         reply = @client.read(FHIR::STU3::Claim,@simple_id)
         assert_response_ok(reply)
         assert_resource_type(reply,FHIR::STU3::Claim)
@@ -387,6 +397,8 @@ module Crucible
           requires resource: 'Claim', methods: ['read']
           validates resource: 'Claim', methods: ['read']
         }
+
+        skip "TODO: implement financial data processing"
 
         reply = @client.read(FHIR::STU3::Claim,@average_id)
         assert_response_ok(reply)
