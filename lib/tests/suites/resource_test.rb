@@ -496,7 +496,7 @@ module Crucible
           validates profiles: ['validate-profile']
         }
 
-        skip "Validation is not yet implemented in Spark FHIR"
+        skip "TODO: implement validation"
 
         result = TestResult.new('X060',"Validate #{resource_class.name.demodulize}", nil, nil, nil)
 
@@ -530,7 +530,7 @@ module Crucible
           validates profiles: ['validate-profile']
         }
 
-        skip "Validation is not yet implemented in Spark FHIR"
+        skip "TODO: implement validation"
 
         result = TestResult.new('X065',"Validate existing #{resource_class.name.demodulize}", nil, nil, nil)
 
@@ -629,7 +629,7 @@ module Crucible
           validates profiles: ['validate-profile']
         }
 
-        skip "Validation is not yet implemented in Spark FHIR"
+        skip "TODO: implement validation"
 
         profile_uri = "http://hl7.org/fhir/StructureDefinition/#{resource_class.name.demodulize}" # the profile to validate with
 

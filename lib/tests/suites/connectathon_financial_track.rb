@@ -426,6 +426,8 @@ module Crucible
           requires resource: 'ClaimResponse', methods: ['search']
           validates resource: 'ClaimResponse', methods: ['search']
         }
+
+        skip "TODO: implement financial data processing"
         skip 'Simple claim not successfully registered in C9F_1A.' unless @simple_id
 
         search_string = @simple_id
@@ -463,6 +465,8 @@ module Crucible
           requires resource: 'ClaimResponse', methods: ['search']
           validates resource: 'ClaimResponse', methods: ['search']
         }
+
+        skip "TODO: implement financial data processing"
         skip 'Simple claim not successfully registered in C9F_1A.' unless @simple_id
 
         search_string = @simple_id
@@ -499,6 +503,8 @@ module Crucible
           requires resource: 'ClaimResponse', methods: ['search']
           validates resource: 'ClaimResponse', methods: ['search']
         }
+
+        skip "TODO: implement financial data processing"
         skip 'Simple claim not successfully registered in C9F_1A.' unless @simple_id
 
         search_string = @simple_id
@@ -537,6 +543,8 @@ module Crucible
           requires resource: 'ClaimResponse', methods: ['search']
           validates resource: 'ClaimResponse', methods: ['search']
         }
+
+        skip "TODO: implement financial data processing"
         skip 'Average claim not successfully registered in C9F_1B.' unless @average_id
 
         search_string = @average_id
@@ -574,6 +582,8 @@ module Crucible
           requires resource: 'ClaimResponse', methods: ['search']
           validates resource: 'ClaimResponse', methods: ['search']
         }
+
+        skip "TODO: implement financial data processing"
         skip 'Average claim not successfully registered in C9F_1B.' unless @average_id
 
         search_string = @average_id
@@ -610,6 +620,8 @@ module Crucible
           requires resource: 'ClaimResponse', methods: ['search']
           validates resource: 'ClaimResponse', methods: ['search']
         }
+
+        skip "TODO: implement financial data processing"
         skip 'Average claim not successfully registered in C9F_1B.' unless @average_id
 
         search_string = @average_id
