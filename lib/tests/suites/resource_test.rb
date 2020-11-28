@@ -496,7 +496,7 @@ module Crucible
           validates profiles: ['validate-profile']
         }
 
-        skip "TODO: implement validation"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/205"
 
         result = TestResult.new('X060',"Validate #{resource_class.name.demodulize}", nil, nil, nil)
 
@@ -530,7 +530,7 @@ module Crucible
           validates profiles: ['validate-profile']
         }
 
-        skip "TODO: implement validation"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/205"
 
         result = TestResult.new('X065',"Validate existing #{resource_class.name.demodulize}", nil, nil, nil)
 
@@ -629,7 +629,7 @@ module Crucible
           validates profiles: ['validate-profile']
         }
 
-        skip "TODO: implement validation"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/205"
 
         profile_uri = "http://hl7.org/fhir/StructureDefinition/#{resource_class.name.demodulize}" # the profile to validate with
 

@@ -46,7 +46,7 @@ module Crucible
           validates resource: nil, methods: ['Audit Logging']
         }
 
-        skip "TODO: generate audit events"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/301"
 
         @patient = @resources.minimal_patient
         @patient.id = nil # clear the identifier

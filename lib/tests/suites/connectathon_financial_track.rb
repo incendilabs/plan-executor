@@ -104,7 +104,7 @@ module Crucible
           validates resource: 'EligibilityRequest', methods: ['create']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/299"
 
         reply = @client.create(@er)
 
@@ -126,7 +126,7 @@ module Crucible
           validates resource: 'EligibilityRequest', methods: ['search']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/299"
 
         options = {
           :search => {
@@ -171,7 +171,7 @@ module Crucible
           validates resource: 'ClaimResponse', methods: ['search']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
 
         reply = @client.create(@preauth)
         assert_response_ok(reply)
@@ -276,7 +276,7 @@ module Crucible
           validates resource: 'Claim', methods: ['create']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
 
         reply = @client.create(@simple)
         assert_response_ok(reply)
@@ -323,7 +323,7 @@ module Crucible
           validates resource: 'Claim', methods: ['create']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
 
         reply = @client.create(@average)
         assert_response_ok(reply)
@@ -371,7 +371,7 @@ module Crucible
           validates resource: 'Claim', methods: ['read']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
 
         reply = @client.read(FHIR::STU3::Claim,@simple_id)
         assert_response_ok(reply)
@@ -398,7 +398,7 @@ module Crucible
           validates resource: 'Claim', methods: ['read']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
 
         reply = @client.read(FHIR::STU3::Claim,@average_id)
         assert_response_ok(reply)
@@ -427,7 +427,7 @@ module Crucible
           validates resource: 'ClaimResponse', methods: ['search']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
         skip 'Simple claim not successfully registered in C9F_1A.' unless @simple_id
 
         search_string = @simple_id
@@ -466,7 +466,7 @@ module Crucible
           validates resource: 'ClaimResponse', methods: ['search']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
         skip 'Simple claim not successfully registered in C9F_1A.' unless @simple_id
 
         search_string = @simple_id
@@ -504,7 +504,7 @@ module Crucible
           validates resource: 'ClaimResponse', methods: ['search']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
         skip 'Simple claim not successfully registered in C9F_1A.' unless @simple_id
 
         search_string = @simple_id
@@ -544,7 +544,7 @@ module Crucible
           validates resource: 'ClaimResponse', methods: ['search']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
         skip 'Average claim not successfully registered in C9F_1B.' unless @average_id
 
         search_string = @average_id
@@ -583,7 +583,7 @@ module Crucible
           validates resource: 'ClaimResponse', methods: ['search']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
         skip 'Average claim not successfully registered in C9F_1B.' unless @average_id
 
         search_string = @average_id
@@ -621,7 +621,7 @@ module Crucible
           validates resource: 'ClaimResponse', methods: ['search']
         }
 
-        skip "TODO: implement financial data processing"
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/300"
         skip 'Average claim not successfully registered in C9F_1B.' unless @average_id
 
         search_string = @average_id
