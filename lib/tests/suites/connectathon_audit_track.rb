@@ -28,7 +28,7 @@ module Crucible
         @client.destroy(FHIR::STU3::Patient, @patient.id) if @patient && !@patient.id.nil?
         @client.destroy(FHIR::STU3::Patient, @patient1.id) if @patient1 && !@patient1.id.nil?
         @client.destroy(FHIR::STU3::Patient, @patient2.id) if @patient2 && !@patient2.id.nil?
-        FHIR::STU3::ResourceAddress::DEFAULTS.delete('X-Provenance') # just in case
+        FHIR::ResourceAddress::DEFAULTS.delete('X-Provenance') # just in case
       end
 
       # Create a Patient then check for AuditEvent
@@ -45,6 +45,9 @@ module Crucible
           validates resource: 'AuditEvent', methods: ['search']
           validates resource: nil, methods: ['Audit Logging']
         }
+
+        skip "TODO: generate audit events"
+
         @patient = @resources.minimal_patient
         @patient.id = nil # clear the identifier
         reply = @client.create(@patient)
@@ -86,6 +89,8 @@ module Crucible
           validates resource: nil, methods: ['transaction-system', 'provenance']
         }
 
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/296"
+
         @patient1 = @resources.minimal_patient
         @patient1.id = 'foo'
 
@@ -98,10 +103,11 @@ module Crucible
         @provenance1.reason[0].display = 'patient administration'
         @provenance1.reason[0].code = 'PATADMIN'
         @provenance1.agent = [ FHIR::STU3::Provenance::Agent.new ]
-        @provenance1.agent[0].role = FHIR::STU3::Coding.new
-        @provenance1.agent[0].role.system = 'http://hl7.org/fhir/provenance-participant-role'
-        @provenance1.agent[0].role.display = 'Author'
-        @provenance1.agent[0].role.code = 'author'
+        @provenance1.agent[0].role = FHIR::STU3::CodeableConcept.new
+        @provenance1.agent[0].role.coding = FHIR::STU3::Coding.new
+        @provenance1.agent[0].role.coding.system = 'http://hl7.org/fhir/provenance-participant-role'
+        @provenance1.agent[0].role.coding.display = 'Author'
+        @provenance1.agent[0].role.coding.code = 'author'
 
         @client.begin_transaction
         @client.add_transaction_request('POST',nil,@patient1)
@@ -116,8 +122,8 @@ module Crucible
         assert_bundle_response(reply)
 
         # set the patient id back from nil to whatever the server created
-        @patient1.id = FHIR::STU3::ResourceAddress.pull_out_id('Patient',reply.resource.entry[0].try(:response).try(:location))
-        @provenance1.id = FHIR::STU3::ResourceAddress.pull_out_id('Provenance',reply.resource.entry[1].try(:response).try(:location))
+        @patient1.id = FHIR::ResourceAddress.pull_out_id('Patient',reply.resource.entry[0].try(:response).try(:location))
+        @provenance1.id = FHIR::ResourceAddress.pull_out_id('Provenance',reply.resource.entry[1].try(:response).try(:location))
 
         options = {
           :search => {
@@ -168,8 +174,10 @@ module Crucible
         @provenance2.agent[0].role.display = 'Author'
         @provenance2.agent[0].role.code = 'author'
 
-        options = { 'X-Provenance' => @provenance2.to_json }
-        reply = @client.base_create(@patient2, options, @client.default_format)
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/297'
+
+        headers = { 'X-Provenance' => URI::encode(@provenance2.to_json) }
+        reply = @client.base_create(@patient2, nil, @client.default_format, headers)
 
         assert_response_ok(reply)
         @patient2.id = reply.id
@@ -188,7 +196,7 @@ module Crucible
         assert_bundle_response(reply)
         assert_equal(1, reply.resource.entry.size, 'There should only be one Provenance for the test Patient currently in the system.', reply.body)
         assert(reply.resource.entry[0].try(:resource).try(:target).try(:first).try(:reference).include?(@patient2.id), 'The correct Provenance was not returned.', reply.body)
-        @provenance2.id = FHIR::STU3::ResourceAddress.pull_out_id('Provenance',reply.resource.entry[0].try(:response).try(:location))
+        @provenance2.id = FHIR::ResourceAddress.pull_out_id('Provenance',reply.resource.entry[0].try(:response).try(:location))
       end
 
       # Update a Patient and check for AuditEvent
@@ -205,6 +213,9 @@ module Crucible
           validates resource: 'AuditEvent', methods: ['search']
           validates resource: nil, methods: ['Audit Logging']
         }
+
+        skip 'Patient record hasn\'t been created in the previous tests' unless @patient
+
         @patient.gender = 'male'
         reply = @client.update(@patient,@patient.id)
         assert_response_ok(reply)
@@ -250,6 +261,9 @@ module Crucible
           validates resource: 'Provenance', methods: ['search']
           validates resource: nil, methods: ['transaction-system', 'provenance']
         }
+
+        assert(@patient1, 'Patient record hasn\'t been created in the previous tests')
+
         @patient1.gender = 'male'
 
         @provenance3 = FHIR::STU3::Provenance.new
@@ -274,7 +288,7 @@ module Crucible
         assert([200,201,202].include?(reply.code), 'Expected response code 200, 201, or 202', reply.body)
         assert_bundle_response(reply)
 
-        @provenance3.id = FHIR::STU3::ResourceAddress.pull_out_id('Provenance',reply.resource.entry[1].try(:response).try(:location))
+        @provenance3.id = FHIR::ResourceAddress.pull_out_id('Provenance',reply.resource.entry[1].try(:response).try(:location))
 
         options = {
           :search => {
@@ -309,6 +323,10 @@ module Crucible
           validates resource: 'Provenance', methods: ['search']
         }
 
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/297'
+
+        assert(@patient2, 'Patient record hasn\'t been created in the previous tests')
+
         @patient2.gender = 'male'
 
         @provenance4 = FHIR::STU3::Provenance.new
@@ -325,8 +343,8 @@ module Crucible
         @provenance4.agent[0].role.display = 'Author'
         @provenance4.agent[0].role.code = 'author'
 
-        options = { 'X-Provenance' => @provenance4.to_json }
-        reply = @client.base_update(@patient2, @patient2.id, options, @client.default_format)
+        headers = { 'X-Provenance' => URI::encode(@provenance4.to_json) }
+        reply = @client.base_update(@patient2, @patient2.id, nil, @client.default_format, headers)
         assert_response_ok(reply)
 
 
@@ -347,8 +365,8 @@ module Crucible
           assert(entry.try(:resource).try(:target).try(:first).try(:reference), 'An incorrect Provenance was returned.', reply.body)
           assert(entry.try(:resource).try(:target).try(:first).try(:reference).include?(@patient2.id), 'An incorrect Provenance was returned.', reply.body)
         end
-        @provenance3.id = FHIR::STU3::ResourceAddress.pull_out_id('Provenance',reply.resource.entry[0].try(:response).try(:location))
-        @provenance4.id = FHIR::STU3::ResourceAddress.pull_out_id('Provenance',reply.resource.entry[1].try(:response).try(:location))
+        @provenance3.id = FHIR::ResourceAddress.pull_out_id('Provenance',reply.resource.entry[0].try(:response).try(:location))
+        @provenance4.id = FHIR::ResourceAddress.pull_out_id('Provenance',reply.resource.entry[1].try(:response).try(:location))
       end
 
       # Read a Patient and check for AuditEvent
@@ -365,6 +383,9 @@ module Crucible
           validates resource: 'AuditEvent', methods: ['search']
           validates resource: nil, methods: ['Audit Logging']
         }
+
+        assert(@patient, 'Patient record hasn\'t been created in the previous tests')
+
         reply = @client.read(FHIR::STU3::Patient,@patient.id)
         assert_response_ok(reply)
 
