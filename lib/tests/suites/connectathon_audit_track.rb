@@ -214,7 +214,9 @@ module Crucible
           validates resource: nil, methods: ['Audit Logging']
         }
 
-        skip 'Patient record hasn\'t been created in the previous tests' unless @patient
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/297'
+
+        assert @patient, 'Patient record hasn\'t been created in the previous tests'
 
         @patient.gender = 'male'
         reply = @client.update(@patient,@patient.id)
@@ -261,6 +263,8 @@ module Crucible
           validates resource: 'Provenance', methods: ['search']
           validates resource: nil, methods: ['transaction-system', 'provenance']
         }
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/297'
 
         assert(@patient1, 'Patient record hasn\'t been created in the previous tests')
 
@@ -383,6 +387,8 @@ module Crucible
           validates resource: 'AuditEvent', methods: ['search']
           validates resource: nil, methods: ['Audit Logging']
         }
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/297'
 
         assert(@patient, 'Patient record hasn\'t been created in the previous tests')
 
