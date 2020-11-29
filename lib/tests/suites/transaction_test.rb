@@ -129,7 +129,7 @@ module Crucible
           validates resource: 'Observation', methods: ['create']
           validates resource: nil, methods: ['transaction-system']
         }
-        skip 'Could not create patient in XFER0.' unless @created_patient_record
+        assert @created_patient_record, 'Could not create patient in XFER0.'
 
         # patient has gained weight
         @obs1 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',250,'kg',@patient0.id, version_namespace)
@@ -165,7 +165,7 @@ module Crucible
           validates resource: 'Condition', methods: ['update']
           validates resource: nil, methods: ['transaction-system']
         }
-        skip 'Could not create patient in XFER0.' unless @created_patient_record
+        assert @created_patient_record, 'Could not create patient in XFER0.'
 
         # weight
         @obs2 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',100,'kg',@patient0.id, version_namespace)
@@ -209,7 +209,7 @@ module Crucible
           validates resource: 'Patient', methods: ['create']
           validates resource: nil, methods: ['transaction-system']
         }
-        skip 'Could not create patient in XFER0.' unless @created_patient_record
+        assert @created_patient_record, 'Could not create patient in XFER0.'
 
         @patient1 = ResourceGenerator.minimal_patient(@patient0.identifier.first.value,@patient0.name.first.given.first, version_namespace)
         reply = @client.create @patient1
@@ -240,7 +240,10 @@ module Crucible
           validates resource: 'Observation', methods: ['create','read','delete']
           validates resource: nil, methods: ['transaction-system']
         }
-        skip 'Could not create patient in XFER0.' unless @created_patient_record
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/305'
+
+        assert @created_patient_record, 'Could not create patient in XFER0.'
 
         # height observation
         @obs3 = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',177,'cm',@patient0.id, version_namespace)
@@ -290,7 +293,10 @@ module Crucible
           validates resource: 'Patient', methods: ['$everything']
           validates resource: nil, methods: ['transaction-system']
         }
-        skip 'Could not create patient in XFER0.' unless @created_patient_record
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/304'
+
+        assert @created_patient_record, 'Could not create patient in XFER0.'
 
         reply = @client.fetch_patient_record(@patient0.id, nil, nil, 'GET')
         assert_response_ok(reply)
@@ -355,7 +361,7 @@ module Crucible
           validates resource: 'Condition', methods: ['delete']
           validates resource: nil, methods: ['transaction-system']
         }
-        skip 'Could not create patient in XFER0.' unless @created_patient_record
+        assert @created_patient_record, 'Could not create patient in XFER0.'
 
         @client.begin_transaction
         @client.add_transaction_request('DELETE', "Patient/#{@patient0.id}") if @patient0 && !@patient0.id.nil?
@@ -388,7 +394,7 @@ module Crucible
           validates resource: 'Condition', methods: ['delete']
           validates resource: nil, methods: ['transaction-system']
         }
-        skip 'Could not create patient in XFER0.' unless @created_patient_record
+        assert @created_patient_record, 'Could not create patient in XFER0.'
 
         @client.begin_transaction
         @client.add_transaction_request('DELETE', "Observation/#{@obs4.id}") if @obs4 && !@obs4.id.nil?
@@ -419,6 +425,8 @@ module Crucible
           validates resource: 'Observation', methods: ['create']
           validates resource: nil, methods: ['batch-system']
         }
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/306'
 
         @batch_patient = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Batch', version_namespace)
         @batch_patient_id = "urn:uuid:#{SecureRandom.uuid}" # assign an id so related resources can reference the patient
@@ -460,6 +468,8 @@ module Crucible
           validates resource: 'Observation', methods: ['create','search']
           validates resource: nil, methods: ['batch-system']
         }
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/305'
 
         @batch_patient_2 = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Batch', version_namespace)
         reply = @client.create @batch_patient_2
@@ -505,9 +515,12 @@ module Crucible
           validates resource: 'Observation', methods: ['delete']
           validates resource: nil, methods: ['batch-system']
         }
-        skip 'Could not create necessary records in XFER11.' unless ((@batch_patient_2 && !@batch_patient_2.id.nil?) ||
-                     (@batch_obs_2 && !@batch_obs_2.id.nil?) ||
-                     (@batch_obs_3 && !@batch_obs_3.id.nil? ))
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/305'
+
+        assert ((@batch_patient_2 && !@batch_patient_2.id.nil?) ||
+            (@batch_obs_2 && !@batch_obs_2.id.nil?) ||
+            (@batch_obs_3 && !@batch_obs_3.id.nil? )), 'Could not create necessary records in XFER11.'
 
         @client.begin_batch
         @client.add_batch_request('DELETE', "Observation/#{@batch_obs_3.id}") if @batch_obs_3 && !@batch_obs_3.id.nil?
