@@ -41,20 +41,20 @@ module Crucible
       end
 
       def teardown
-        @client.destroy(FHIR::Condition, @cond1_reply.id) if !@cond1_id.nil?
-        @client.destroy(FHIR::Procedure, @prc_reply.id) if !@prc_id.nil?
-        @client.destroy(FHIR::Encounter, @enc2_reply.id) if !@enc2_id.nil?
-        @client.destroy(FHIR::Encounter, @enc1_reply.id) if !@enc1_id.nil?
-        @client.destroy(FHIR::DiagnosticReport, @dr_reply.id) if !@dr_id.nil?
-        @client.destroy(FHIR::Observation, @obs_reply.id) if !@obs_id.nil?
-        @client.destroy(FHIR::Condition, @cond2_reply.id) if !@cond2_id.nil?
-        @client.destroy(FHIR::Patient, @pat_reply.id) if !@patient_id.nil?
+        @client.destroy(FHIR::STU3::Condition, @cond1_reply.id) if !@cond1_id.nil?
+        @client.destroy(FHIR::STU3::Procedure, @prc_reply.id) if !@prc_id.nil?
+        @client.destroy(FHIR::STU3::Encounter, @enc2_reply.id) if !@enc2_id.nil?
+        @client.destroy(FHIR::STU3::Encounter, @enc1_reply.id) if !@enc1_id.nil?
+        @client.destroy(FHIR::STU3::DiagnosticReport, @dr_reply.id) if !@dr_id.nil?
+        @client.destroy(FHIR::STU3::Observation, @obs_reply.id) if !@obs_id.nil?
+        @client.destroy(FHIR::STU3::Condition, @cond2_reply.id) if !@cond2_id.nil?
+        @client.destroy(FHIR::STU3::Patient, @pat_reply.id) if !@patient_id.nil?
         @patient_ids.each do |id|
-          @client.destroy(FHIR::Patient, id)
+          @client.destroy(FHIR::STU3::Patient, id)
         end
-        @client.destroy(FHIR::Practitioner, @prac_reply.id) if !@prac_id.nil?
-        @client.destroy(FHIR::Organization, @org2_reply.id) if !@org2_id.nil?
-        @client.destroy(FHIR::Organization, @org1_reply.id) if !@org1_id.nil?
+        @client.destroy(FHIR::STU3::Practitioner, @prac_reply.id) if !@prac_id.nil?
+        @client.destroy(FHIR::STU3::Organization, @org2_reply.id) if !@org2_id.nil?
+        @client.destroy(FHIR::STU3::Organization, @org1_reply.id) if !@org1_id.nil?
       end
 
       ['GET','POST'].each do |how|
@@ -70,10 +70,12 @@ module Crucible
           validates resource: 'Patient', methods: ['$everything']
         }
 
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/298"
+
         reply = @client.fetch_patient_record(nil,nil,nil,how)
 
         assert( (reply.code>=400 && reply.code<500), "If there is no nominated patient (e.g. the operation is invoked at the system level) and the context is not associated with a single patient record, then the server should return an error.", reply.body)
-        warning { assert_resource_type(reply,FHIR::OperationOutcome) }
+        warning { assert_resource_type(reply,FHIR::STU3::OperationOutcome) }
       end
 
       #
@@ -87,12 +89,14 @@ module Crucible
           validates resource: 'Patient', methods: ['$everything']
         }
 
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/298"
+
         start = (DateTime.now - (6*30)).strftime("%Y-%m-%d")
         stop = DateTime.now.strftime("%Y-%m-%d")
         reply = @client.fetch_patient_record(nil, start, stop, how)
 
         assert( (reply.code>=400 && reply.code<500), "If there is no nominated patient (e.g. the operation is invoked at the system level) and the context is not associated with a single patient record, then the server should return an error.", reply.body)
-        warning { assert_resource_type(reply,FHIR::OperationOutcome) }
+        warning { assert_resource_type(reply,FHIR::STU3::OperationOutcome) }
       end
 
       #
@@ -106,7 +110,8 @@ module Crucible
           validates resource: 'Patient', methods: ['create', '$everything']
         }
 
-        skip 'Patient record not created during setup.' unless @created_patient_record
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/237"
+        assert(@created_patient_record, 'Patient record not created during setup.')
 
         record = @client.fetch_patient_record(@patient_id, nil, nil, how)
 
@@ -118,7 +123,7 @@ module Crucible
 
         returned_patient = nil
         record.resource.entry.each do |entry|
-          returned_patient = entry.resource if entry.resource.class == FHIR::Patient
+          returned_patient = entry.resource if entry.resource.class == FHIR::STU3::Patient
         end
 
         assert patient.equals?(returned_patient, ['meta', 'text']), "Returned patient doesn't match original patient."
@@ -135,7 +140,8 @@ module Crucible
           validates resource: 'Patient', methods: ['create', '$everything']
         }
 
-        skip 'Patient record not created during setup.' unless @created_patient_record
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/237"
+        assert(@created_patient_record, 'Patient record not created during setup.')
 
         start = (DateTime.now - (6*30)).strftime("%Y-%m-%d")
         stop = DateTime.now.strftime("%Y-%m-%d")
@@ -149,7 +155,7 @@ module Crucible
 
         returned_patient = nil
         record.resource.entry.each do |entry|
-          returned_patient = entry.resource if entry.resource.class == FHIR::Patient
+          returned_patient = entry.resource if entry.resource.class == FHIR::STU3::Patient
         end
 
         assert patient.equals?(returned_patient, ['meta', 'text']), "Returned patient doesn't match original patient."
@@ -168,14 +174,15 @@ module Crucible
           validates resource: 'Patient', methods: ['create', 'update', '$everything']
         }
 
-        skip 'Patient record not created during setup.' unless @created_patient_record
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/237"
+        assert(@created_patient_record, 'Patient record not created during setup.')
 
         record = @client.fetch_patient_record(@patient_id,nil,nil,how)
 
         assert_response_ok(record)
         assert_bundle_response(record)
 
-        @patient.telecom = [ FHIR::ContactPoint.new ]
+        @patient.telecom = [ FHIR::STU3::ContactPoint.new ]
         @patient.telecom[0].system = 'phone'
         @patient.telecom[0].value='1-234-567-8901'
         @patient.telecom[0].use = 'mobile'
@@ -190,7 +197,7 @@ module Crucible
 
         returned_patient = nil
         record.resource.entry.each do |entry|
-          returned_patient = entry.resource if entry.resource.class == FHIR::Patient
+          returned_patient = entry.resource if entry.resource.class == FHIR::STU3::Patient
         end
         assert !returned_patient.nil?, 'The response bundle did not include the Patient.', record.body
         assert returned_patient.telecom[0].try(:value) == '1-234-567-8901'
@@ -222,7 +229,7 @@ module Crucible
           validates resource: 'Procedure', methods: ['create']
         }
 
-        skip 'Patient record not created during setup.' unless @created_patient_record
+        assert(@created_patient_record, 'Patient record not created during setup.')
 
         record = @client.fetch_patient_record(@pat_reply.id)
         assert_response_ok(record)
@@ -231,40 +238,40 @@ module Crucible
         mismatches = []
         record.resource.entry.each do |bundle_entry|
           case bundle_entry.resource.class
-          when FHIR::Organization
+          when FHIR::STU3::Organization
             case bundle_entry.resource.id
             when @org1_id
               mismatches << bundle_entry.resource.mismatch(@organization_1, ['_id', 'meta', 'text']) unless bundle_entry.resource.equals?(@organization_1)
             when @org2_id
               mismatches << bundle_entry.resource.mismatch(@organization_2, ['_id', 'meta', 'text']) unless bundle_entry.resource.equals?(@organization_2)
             end
-          when FHIR::Practitioner
+          when FHIR::STU3::Practitioner
             mismatches << bundle_entry.resource.mismatch(@practitioner, ['_id', 'meta', 'text']) unless bundle_entry.resource.equals?(@practitioner)
-          when FHIR::Patient
+          when FHIR::STU3::Patient
             mismatches << bundle_entry.resource.mismatch(@patient, ['_id', 'meta', 'text']) unless bundle_entry.resource.equals?(@patient)
-          when FHIR::Condition
+          when FHIR::STU3::Condition
             case bundle_entry.resource.id
             when @cond1_id
               mismatches << bundle_entry.resource.mismatch(@condition_1, ['_id', 'meta', 'text']) unless bundle_entry.resource.equals?(@condition_1)
             when @cond2_id
               mismatches << bundle_entry.resource.mismatch(@condition_2, ['_id', 'meta', 'text']) unless bundle_entry.resource.equals?(@condition_2)
             end
-          when FHIR::Observation
+          when FHIR::STU3::Observation
             mismatches << bundle_entry.resource.mismatch(@observation, ['_id', 'meta', 'text']) unless bundle_entry.resource.equals?(@observation)
-          when FHIR::DiagnosticReport
+          when FHIR::STU3::DiagnosticReport
             mismatches << bundle_entry.resource.mismatch(@diagnosticreport, ['_id', 'meta', 'text', 'issued']) unless bundle_entry.resource.equals?(@diagnosticreport)
             # account for instant format on DiagnosticReport.issued
             t0 = Time.iso8601(@diagnosticreport.issued)
             t1 = Time.iso8601(bundle_entry.resource.issued)
-            mismatches << 'FHIR::DiagnosticReport::issued' unless t0==t1            
-          when FHIR::Encounter
+            mismatches << 'FHIR::STU3::DiagnosticReport::issued' unless t0==t1            
+          when FHIR::STU3::Encounter
             case bundle_entry.resource.id
             when @enc1_id
               mismatches << bundle_entry.resource.mismatch(@encounter_1, ['_id', 'meta', 'text']) unless bundle_entry.resource.equals?(@encounter_1)
             when @enc2_id
               mismatches << bundle_entry.resource.mismatch(@encounter_2, ['_id', 'meta', 'text']) unless bundle_entry.resource.equals?(@encounter_2)
             end
-          when FHIR::Procedure
+          when FHIR::STU3::Procedure
             mismatches << bundle_entry.resource.mismatch(@procedure, ['_id', 'meta', 'text']) unless bundle_entry.resource.equals?(@procedure)
           end
         end
@@ -297,7 +304,8 @@ module Crucible
           validates resource: 'Procedure', methods: ['create']
         }
 
-        skip 'Patient record not created during setup.' unless @created_patient_record
+        skip "TODO: https://github.com/FirelyTeam/spark/issues/237"
+        assert(@created_patient_record, 'Patient record not created during setup.')
 
         record = @client.fetch_patient_record(@pat_reply.id)
         assert_response_ok(record)
@@ -308,7 +316,7 @@ module Crucible
             @ids_count[bundle_entry.resource.class.to_s].delete bundle_entry.resource.id
           else
             warning { assert @ids_count.keys.include?(bundle_entry.resource.class.to_s),
-              "Found additional resource(s) in $everything Bundle: #{bundle_entry.resource.class}#{ "-#{bundle_entry.resource.code.text}" if bundle_entry.resource.class == FHIR::List}" }
+              "Found additional resource(s) in $everything Bundle: #{bundle_entry.resource.class}#{ "-#{bundle_entry.resource.code.text}" if bundle_entry.resource.class == FHIR::STU3::List}" }
           end
         end
 
@@ -320,46 +328,46 @@ module Crucible
 
       def create_patient_record
         @ids_count = {
-          'FHIR::Organization' => [],
-          'FHIR::Practitioner' => [],
-          'FHIR::Patient' => [],
-          'FHIR::Condition' => [],
-          'FHIR::Observation' => [],
-          'FHIR::DiagnosticReport' => [],
-          'FHIR::Encounter' => [],
-          'FHIR::Procedure' => []
+          'FHIR::STU3::Organization' => [],
+          'FHIR::STU3::Practitioner' => [],
+          'FHIR::STU3::Patient' => [],
+          'FHIR::STU3::Condition' => [],
+          'FHIR::STU3::Observation' => [],
+          'FHIR::STU3::DiagnosticReport' => [],
+          'FHIR::STU3::Encounter' => [],
+          'FHIR::STU3::Procedure' => []
         }
 
         @organization_1.id = nil
         @org1_reply = @client.create @organization_1
         @org1_id = @org1_reply.id
         @organization_1.id = @org1_id
-        @ids_count[FHIR::Organization.to_s] << @org1_id
+        @ids_count[FHIR::STU3::Organization.to_s] << @org1_id
         assert_response_ok(@org1_reply)
 
         @organization_2.id = nil
         @org2_reply = @client.create @organization_2
         @org2_id = @org2_reply.id
         @organization_2.id = @org2_id
-        @ids_count[FHIR::Organization.to_s] << @org2_id
+        @ids_count[FHIR::STU3::Organization.to_s] << @org2_id
         assert_response_ok(@org2_reply)
 
         @practitioner.id = nil
-        @practitioner.role[0].organization.reference = "Organization/#{@org1_id}"
+        # @practitioner.role[0].organization.reference = "Organization/#{@org1_id}"
         @prac_reply = @client.create @practitioner
         @prac_id = @prac_reply.id
         @practitioner.id = @prac_id
-        @ids_count[FHIR::Practitioner.to_s] << @prac_id
+        @ids_count[FHIR::STU3::Practitioner.to_s] << @prac_id
         assert_response_ok(@prac_reply)
 
         @patient.id = nil
-        @patient.generalPractitioner = [ FHIR::Reference.new ] 
+        @patient.generalPractitioner = [ FHIR::STU3::Reference.new ] 
         @patient.generalPractitioner[0].reference= "Practitioner/#{@prac_id}"
         @patient.managingOrganization.reference = "Organization/#{@org1_id}"
         @pat_reply = @client.create @patient
         @patient_id = @pat_reply.id
         @patient.id = @patient_id
-        @ids_count[FHIR::Patient.to_s] << @patient_id
+        @ids_count[FHIR::STU3::Patient.to_s] << @patient_id
         assert_response_ok(@pat_reply)
 
         @condition_2.id = nil
@@ -368,7 +376,7 @@ module Crucible
         @cond2_reply = @client.create @condition_2
         @cond2_id = @cond2_reply.id
         @condition_2.id = @cond2_id
-        @ids_count[FHIR::Condition.to_s] << @cond2_id
+        @ids_count[FHIR::STU3::Condition.to_s] << @cond2_id
         assert_response_ok(@cond2_reply)
 
         @observation.id = nil
@@ -377,52 +385,53 @@ module Crucible
         @obs_reply = @client.create @observation
         @obs_id = @obs_reply.id
         @observation.id = @obs_id
-        @ids_count[FHIR::Observation.to_s] << @obs_id
+        @ids_count[FHIR::STU3::Observation.to_s] << @obs_id
         assert_response_ok(@obs_reply)
 
         @diagnosticreport.id = nil
         @diagnosticreport.subject.reference = "Patient/#{@patient_id}"
-        @diagnosticreport.performer[0].reference = "Organization/#{@org2_id}"
+        # @diagnosticreport.performer[0].actor = FHIR::STU3::Reference.new
+        @diagnosticreport.performer[0].actor.reference = "Organization/#{@org2_id}"
         @dr_reply = @client.create @diagnosticreport
         @dr_id = @dr_reply.id
         @diagnosticreport.id = @dr_id
-        @ids_count[FHIR::DiagnosticReport.to_s] << @dr_id
+        @ids_count[FHIR::STU3::DiagnosticReport.to_s] << @dr_id
         assert_response_ok(@dr_reply)
 
         @encounter_1.id = nil
-        @encounter_1.patient.reference = "Patient/#{@patient_id}"
+        @encounter_1.subject.reference = "Patient/#{@patient_id}"
         @encounter_1.participant[0].individual.reference = "Practitioner/#{@prac_id}"
         @encounter_1.serviceProvider.reference = "Organization/#{@org1_id}"
         @enc1_reply = @client.create @encounter_1
         @enc1_id = @enc1_reply.id
         @encounter_1.id = @enc1_id
-        @ids_count[FHIR::Encounter.to_s] << @enc1_id
+        @ids_count[FHIR::STU3::Encounter.to_s] << @enc1_id
         assert_response_ok(@enc1_reply)
 
         @encounter_2.id = nil
-        @encounter_2.patient.reference = "Patient/#{@patient_id}"
+        @encounter_2.subject.reference = "Patient/#{@patient_id}"
         @encounter_2.participant[0].individual.reference = "Practitioner/#{@prac_id}"
         @encounter_2.serviceProvider.reference = "Organization/#{@org1_id}"
-        @encounter_2.indication[0].reference = nil
+        @encounter_2.diagnosis[0].condition.reference = nil
         @enc2_reply = @client.create @encounter_2
         @enc2_id = @enc2_reply.id
         @encounter_2.id = @enc2_id
-        @ids_count[FHIR::Encounter.to_s] << @enc2_id
+        @ids_count[FHIR::STU3::Encounter.to_s] << @enc2_id
         assert_response_ok(@enc2_reply)
 
         @procedure.id = nil
         @procedure.subject.reference = "Patient/#{@patient_id}"
         # @procedure.report[0].reference = "DiagnosticReport/#{@dr_id}"
         @procedure.performer[0].actor.reference = "Practitioner/#{@prac_id}"
-        @procedure.encounter.reference = "Encounter/#{@enc2_id}"
+        @procedure.context.reference = "Encounter/#{@enc2_id}"
         @prc_reply = @client.create @procedure
         @prc_id = @prc_reply.id
         @procedure.id = @prc_id
-        @ids_count[FHIR::Procedure.to_s] << @prc_id
+        @ids_count[FHIR::STU3::Procedure.to_s] << @prc_id
         assert_response_ok(@prc_reply)
 
-        # @encounter_2.indication = [ FHIR::Reference.new ] 
-        @encounter_2.indication[0].reference = "Procedure/#{@prc_id}"
+        # @encounter_2.indication = [ FHIR::STU3::Reference.new ] 
+        @encounter_2.diagnosis[0].condition.reference = "Procedure/#{@prc_id}"
         @enc2_reply = @client.update @encounter_2, @enc2_id
         assert_response_ok(@enc2_reply)
 
@@ -431,16 +440,16 @@ module Crucible
         @condition_1.context.reference = "Encounter/#{@enc1_id}"
         @condition_1.asserter.reference = "Practitioner/#{@prac_id}"
         @condition_1.evidence[0].detail[0].reference = "Observation/#{@obs_id}"
-        ref = FHIR::Reference.new
+        ref = FHIR::STU3::Reference.new
         ref.reference = "Procedure/#{@prc_id}"
         @condition_1.evidence[0].detail << ref
-        ref = FHIR::Reference.new
+        ref = FHIR::STU3::Reference.new
         ref.reference = "Condition/#{@cond2_id}"
         @condition_1.evidence[0].detail << ref
         @cond1_reply = @client.create @condition_1
         @cond1_id = @cond1_reply.id
         @condition_1.id = @cond1_id
-        @ids_count[FHIR::Condition.to_s] << @cond1_id
+        @ids_count[FHIR::STU3::Condition.to_s] << @cond1_id
         assert_response_ok(@cond1_reply)
       end
 
