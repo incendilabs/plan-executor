@@ -70,6 +70,8 @@ module Crucible
             validates resource: 'MedicationRequest', methods: ['read']
           }
 
+          skip 'TODO: https://github.com/FirelyTeam/spark/issues/302'
+
           patchset = [{ op: "replace", path: "MedicationRequest/status", value: "completed" }]
           reply = @client.partial_update(FHIR::MedicationRequest, @medication_order_id, patchset, {}, resource_format(fmt))
 
@@ -97,7 +99,9 @@ module Crucible
             validates resource: 'MedicationRequest', methods: ['read']
           }
 
-          skip "VersionId of Existing Medication Request not returned in C12PATCH_1_(#{fmt})." if @previous_version_id.nil?
+          skip 'TODO: https://github.com/FirelyTeam/spark/issues/302'
+
+          assert(!@previous_version_id.nil?, "VersionId of Existing Medication Request not returned in C12PATCH_1_(#{fmt}).")
 
           patchset = [{ op: "replace", path: "MedicationRequest/status", value: "active" }]
 
