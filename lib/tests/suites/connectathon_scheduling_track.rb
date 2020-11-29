@@ -37,7 +37,7 @@ module Crucible
         # Create a schedule
         @schedule = @resources.scheduling_schedule
         @schedule.id = nil # clear the identifier, in case the server checks for duplicates
-        actor_reference = FHIR::Reference.new
+        actor_reference = FHIR::STU3::Reference.new
         actor_reference.reference = "Practitioner/#{@practitioner.id}"
         @schedule.actor = [actor_reference]
         reply = @client.create(@schedule)
@@ -54,13 +54,13 @@ module Crucible
       end
 
       def teardown
-        @client.destroy(FHIR::Patient, @patient.id) if !@patient.id.nil?
-        @client.destroy(FHIR::Practitioner, @practitioner.id) if !@practitioner.try(:id).nil?
-        @client.destroy(FHIR::Schedule, @schedule.id) if !@schedule.try(:id).nil?
-        @client.destroy(FHIR::Slot, @slot.id) if !@slot.try(:id).nil?
-        @client.destroy(FHIR::Appointment, @appointment.id) if @appointment && !@appointment.id.nil?
-        @client.destroy(FHIR::AppointmentResponse, @appointment_response_patient.id) if @appointment_response_patient && !@appointment_response_patient.id.nil?
-        @client.destroy(FHIR::AppointmentResponse, @appointment_response_practitioner.id) if @appointment_response_practitioner && !@appointment_response_practitioner.id.nil?
+        @client.destroy(FHIR::STU3::Patient, @patient.id) if !@patient.id.nil?
+        @client.destroy(FHIR::STU3::Practitioner, @practitioner.id) if !@practitioner.try(:id).nil?
+        @client.destroy(FHIR::STU3::Schedule, @schedule.id) if !@schedule.try(:id).nil?
+        @client.destroy(FHIR::STU3::Slot, @slot.id) if !@slot.try(:id).nil?
+        @client.destroy(FHIR::STU3::Appointment, @appointment.id) if @appointment && !@appointment.id.nil?
+        @client.destroy(FHIR::STU3::AppointmentResponse, @appointment_response_patient.id) if @appointment_response_patient && !@appointment_response_patient.id.nil?
+        @client.destroy(FHIR::STU3::AppointmentResponse, @appointment_response_practitioner.id) if @appointment_response_practitioner && !@appointment_response_practitioner.id.nil?
       end
 
       # Find Practitioner's schedule
@@ -82,7 +82,7 @@ module Crucible
             }
           }
         }
-        reply = @client.search(FHIR::Schedule, options)
+        reply = @client.search(FHIR::STU3::Schedule, options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
         assert_equal(1, reply.resource.entry.size, 'There should only be one Schedule for the test Practitioner currently in the system.', reply.body)
@@ -108,7 +108,7 @@ module Crucible
             }
           }
         }
-        reply = @client.search(FHIR::Slot, options)
+        reply = @client.search(FHIR::STU3::Slot, options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
         assert_equal(1, reply.resource.entry.size, 'There should only be one Slot for the test Practitioner\'s Schedule currently in the system.', reply.body)
@@ -285,7 +285,7 @@ module Crucible
           }
         }
 
-        reply = @client.search(FHIR::Practitioner, options)
+        reply = @client.search(FHIR::STU3::Practitioner, options)
         assert_response_ok(reply)
 
         practitioner = reply.resource.entry.try(:first).try(:resource)
@@ -312,7 +312,7 @@ module Crucible
           }
         }
 
-        reply = @client.search(FHIR::HealthcareService, options)
+        reply = @client.search(FHIR::STU3::HealthcareService, options)
         assert_response_ok(reply)
 
         service = reply.resource.entry.try(:first).try(:resource)
