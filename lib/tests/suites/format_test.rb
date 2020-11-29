@@ -289,7 +289,7 @@ module Crucible
 
         # There's no such a strict requirement in DSTU2 spec.
         # http://hl7.org/fhir/DSTU2/http.html#mime-type
-        skip if fhir_version == :dstu2 || fhir_version == :stu3
+        skip 'There\'s no such a strict requirement in DSTU2/STU3 spec' if fhir_version == :dstu2 || fhir_version == :stu3
 
         @client.use_format_param = false
         reply = @client.read_feed(get_resource(:Patient),'application/foobar')
@@ -309,7 +309,7 @@ module Crucible
 
         # There's no such a strict requirement in DSTU2 spec.
         # http://hl7.org/fhir/DSTU2/http.html#mime-type
-        skip if fhir_version == :dstu2 || fhir_version == :stu3
+        skip 'There\'s no such a strict requirement in DSTU2/STU3 spec' if fhir_version == :dstu2 || fhir_version == :stu3
 
         @client.use_format_param = true
         reply = @client.read_feed(get_resource(:Patient),'application/foobar')
