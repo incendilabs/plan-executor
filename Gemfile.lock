@@ -8,6 +8,16 @@ GIT
       mime-types (>= 3.0)
       nokogiri (>= 1.10.4)
 
+GIT
+  remote: https://github.com/incendilabs/fhir_stu3_models.git
+  revision: c6c268596bd16d1cc499dc8063e6467c99d938eb
+  specs:
+    fhir_stu3_models (3.0.1)
+      bcp47 (>= 0.3)
+      date_time_precision (>= 0.8)
+      mime-types (>= 3.0)
+      nokogiri (>= 1.10.4)
+
 PATH
   remote: .
   specs:
@@ -16,7 +26,6 @@ PATH
       date_time_precision
       fhir_client
       fhir_models
-      fhir_stu3_models
       jsonpath
       nokogiri (>= 1.8.2)
       nokogiri-diff
@@ -63,12 +72,7 @@ GEM
       rack (>= 1.5)
       rest-client (~> 2.0)
       tilt (>= 1.1)
-    fhir_models (4.1.0)
-      bcp47 (>= 0.3)
-      date_time_precision (>= 0.8)
-      mime-types (>= 3.0)
-      nokogiri (>= 1.10.4)
-    fhir_stu3_models (3.0.1)
+    fhir_models (4.1.1)
       bcp47 (>= 0.3)
       date_time_precision (>= 0.8)
       mime-types (>= 3.0)
@@ -79,14 +83,13 @@ GEM
       domain_name (~> 0.5)
     i18n (1.8.5)
       concurrent-ruby (~> 1.0)
-    jsonpath (1.0.5)
+    jsonpath (1.0.6)
       multi_json
-      to_regexp (~> 0.2.1)
     jwt (2.2.2)
     method_source (1.0.0)
     mime-types (3.3.1)
       mime-types-data (~> 3.2015)
-    mime-types-data (3.2020.0512)
+    mime-types-data (3.2020.1104)
     mini_portile2 (2.4.0)
     minitest (5.14.2)
     multi_json (1.15.0)
@@ -127,17 +130,18 @@ GEM
       mime-types (>= 1.16, < 4.0)
       netrc (~> 0.8)
     ruby2_keywords (0.0.2)
-    simplecov (0.19.1)
+    simplecov (0.20.0)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
+      simplecov_json_formatter (~> 0.1)
     simplecov-html (0.12.3)
+    simplecov_json_formatter (0.1.2)
     tdiff (0.3.4)
-    test-unit (3.3.6)
+    test-unit (3.3.7)
       power_assert
     thread_safe (0.3.6)
     tilt (2.0.10)
-    to_regexp (0.2.1)
-    tzinfo (1.2.7)
+    tzinfo (1.2.8)
       thread_safe (~> 0.1)
     tzinfo-data (1.2020.4)
       tzinfo (>= 1.0.0)
@@ -145,11 +149,11 @@ GEM
       unf_ext
     unf_ext (0.0.7.7)
     unicode_utils (1.4.0)
-    webmock (3.9.3)
+    webmock (3.10.0)
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
-    zeitwerk (2.4.1)
+    zeitwerk (2.4.2)
 
 PLATFORMS
   ruby
@@ -159,6 +163,7 @@ DEPENDENCIES
   ansi
   awesome_print
   fhir_dstu2_models!
+  fhir_stu3_models!
   plan_executor!
   pry
   pry-coolline
