@@ -92,7 +92,7 @@ module Crucible
         }
 
         result = TestResult.new('X010',"Create new #{resource_class.name.demodulize}", nil, nil, nil)
-        ignore_client_exception { @temp_resource = ResourceGenerator.generate(@resource_class,3).create }
+        ignore_client_exception { @temp_resource = ResourceGenerator.generate(@resource_class,4).create }
         @temp_version = @client.reply.version
 
         if @client.reply.code==201
@@ -118,7 +118,7 @@ module Crucible
         result = TestResult.new('X012',"Conditional Create #{resource_class.name.demodulize} (No Matches)", nil, nil, nil)
         # chances are good that no resource has this ID
         ifNoneExist = { '_id' => "#{(SecureRandom.uuid * 2)[0..63]}" }
-        ignore_client_exception { @conditional_create_resource_a = ResourceGenerator.generate(@resource_class,3).conditional_create(ifNoneExist) }
+        ignore_client_exception { @conditional_create_resource_a = ResourceGenerator.generate(@resource_class,4).conditional_create(ifNoneExist) }
 
         if @client.reply.code==201
           result.update(STATUS[:pass], "New #{resource_class.name.demodulize} was created.", @client.reply.body)
@@ -151,7 +151,7 @@ module Crucible
           raise AssertionException.new("Preexisting #{resource_class.name.demodulize} unknown.", nil)
         end
         ifNoneExist = { '_id' => @preexisting_id }
-        ignore_client_exception { @conditional_create_resource_b = ResourceGenerator.generate(@resource_class,3).conditional_create(ifNoneExist) }
+        ignore_client_exception { @conditional_create_resource_b = ResourceGenerator.generate(@resource_class,4).conditional_create(ifNoneExist) }
 
         if @client.reply.code==200
           result.update(STATUS[:pass], "Request was correctly ignored.", @client.reply.body)
@@ -172,7 +172,7 @@ module Crucible
         result = TestResult.new('X014',"Conditional Create #{resource_class.name.demodulize}", nil, nil, nil)
         # this should match all resources
         ifNoneExist = { '_lastUpdated' => 'gt1900-01-01' }
-        ignore_client_exception { @conditional_create_resource_c = ResourceGenerator.generate(@resource_class,3).conditional_create(ifNoneExist) }
+        ignore_client_exception { @conditional_create_resource_c = ResourceGenerator.generate(@resource_class,4).conditional_create(ifNoneExist) }
 
         if @client.reply.code==412
           result.update(STATUS[:pass], "Request correctly failed.", @client.reply.body)
@@ -248,7 +248,7 @@ module Crucible
         if @preexisting.nil?
           result.update(STATUS[:skip], "Unable to update -- existing #{resource_class.name.demodulize} is not available or was not valid.", nil)
         else
-          ResourceGenerator.set_fields!(@preexisting, version_namespace.to_s, 3)
+          ResourceGenerator.set_fields!(@preexisting, version_namespace.to_s, 4)
           ResourceGenerator.apply_invariants!(@preexisting)
 
           ignore_client_exception { @preexisting.update }
@@ -291,7 +291,7 @@ module Crucible
         result = TestResult.new('X032',"Conditional Update #{resource_class.name.demodulize} (No Matches)", nil, nil, nil)
 
         searchParams = { '_id' => "#{(SecureRandom.uuid * 2)[0..63]}" }
-        ignore_client_exception { @conditional_update_resource_a = ResourceGenerator.generate(@resource_class,3).conditional_update(searchParams) }
+        ignore_client_exception { @conditional_update_resource_a = ResourceGenerator.generate(@resource_class,4).conditional_update(searchParams) }
         # chances are good that no resource has this ID
 
         if @client.reply.code==201
@@ -335,7 +335,7 @@ module Crucible
         if @preexisting.nil?
           result.update(STATUS[:skip], "Unable to update -- existing #{resource_class.name.demodulize} is not available or was not valid.", nil)
         else
-          ResourceGenerator.set_fields!(@preexisting, version_namespace.to_s, 3)
+          ResourceGenerator.set_fields!(@preexisting, version_namespace.to_s, 4)
           ResourceGenerator.apply_invariants!(@preexisting)
 
           searchParams = { '_id' => @preexisting_id }
@@ -379,7 +379,7 @@ module Crucible
 
         result = TestResult.new('X034',"Conditional Update #{resource_class.name.demodulize}", nil, nil, nil)
         searchParams = { '_lastUpdated' => 'gt1900-01-01' }
-        ignore_client_exception { @conditional_update_resource_b = ResourceGenerator.generate(@resource_class,3).conditional_update(searchParams) }
+        ignore_client_exception { @conditional_update_resource_b = ResourceGenerator.generate(@resource_class,4).conditional_update(searchParams) }
 
         if @client.reply.code==412
           result.update(STATUS[:pass], "Request correctly failed.", @client.reply.body)
@@ -500,7 +500,7 @@ module Crucible
 
         result = TestResult.new('X060',"Validate #{resource_class.name.demodulize}", nil, nil, nil)
 
-        tres = ResourceGenerator.generate(@resource_class,3)
+        tres = ResourceGenerator.generate(@resource_class,4)
         reply = @client.validate tres
         if reply.code==200
           result.update(STATUS[:pass], "#{resource_class.name.demodulize} was validated.", reply.body)
@@ -635,7 +635,7 @@ module Crucible
 
         result = TestResult.new('X067',"Validate #{resource_class.name.demodulize} against a profile", nil, nil, nil)
 
-        tres = ResourceGenerator.generate(@resource_class,3)
+        tres = ResourceGenerator.generate(@resource_class,4)
         reply = @client.validate(tres,{profile_uri: profile_uri})
         if reply.code==200
           result.update(STATUS[:pass], "#{resource_class.name.demodulize} was validated.", reply.body)
