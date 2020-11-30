@@ -147,7 +147,9 @@ module Crucible
           links "#{BASE_SPEC_LINK}/patient.html#search"
           validates resource: "Patient", methods: ["search"]
         }
-        skip 'Could not find a patient to search on in setup.' unless @read_entire_feed
+
+        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
+
         search_string = ''
         if fhir_version == :dstu2
           search_string = @patient.name[0].family.first[0..2]
@@ -196,7 +198,9 @@ module Crucible
           links "#{BASE_SPEC_LINK}/patient.html#search"
           validates resource: "Patient", methods: ["search"]
         }
-        skip 'Could not find a patient to search on in setup.' unless @read_entire_feed
+
+        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
+
         search_string = @patient.name[0].given[0]
         search_regex = Regexp.new(search_string, Regexp::IGNORECASE)
         # how many patients in the bundle have matching names?
@@ -240,7 +244,9 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        skip 'Could not find a patient to search on in setup.' unless @read_entire_feed
+
+        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
+
         # pick some search parameters... we previously created
         # next, we're going execute a series of searches for conditions referencing the patient
         options = {
@@ -271,7 +277,9 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        skip 'Could not find a patient to search on in setup.' unless @read_entire_feed
+
+        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
+
         # pick some search parameters... we previously created
         options = {
           :id => @entries[0].resource.id,
@@ -311,7 +319,9 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        skip 'Could not find a patient to search on in setup.' unless @read_entire_feed
+
+        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
+
         # pick some search parameters... we previously created
         patient_id = @entries[0].resource.id
 
@@ -344,7 +354,9 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        skip 'Could not find a patient to search on in setup.' unless @read_entire_feed
+
+        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
+
         # pick some search parameters... we previously created
         options = {
           :id => @entries[0].resource.id,
@@ -385,7 +397,9 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        skip 'Could not find a patient to search on in setup.' unless @read_entire_feed
+        
+        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
+        
         # pick some search parameters... we previously created
         patient = @entries[0].resource
         patient_id = @entries[0].resource.id
@@ -419,7 +433,7 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        skip 'Could not find a patient to search on in setup.' unless @read_entire_feed
+        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
         # pick some search parameters... we previously created
         patient_id = @entries[0].resource.id
 
@@ -452,7 +466,7 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        skip 'Could not find a patient to search on in setup.' unless @read_entire_feed
+        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
         # pick some search parameters... we previously created
         patient_name = @patient.name[0].family
 
@@ -485,7 +499,7 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        skip 'Could not create a patient in setup.' unless @patient_id
+        assert @patient_id, 'Could not create a patient in setup.'
         # pick some search parameters... we previously created
         patient_identifier = @patient.identifier[0].value
 
@@ -518,7 +532,7 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        skip 'Could not create Condition in setup.' unless @condition_id
+        assert @condition_id, 'Could not create Condition in setup.'
 
         # next, we're going execute a series of searches for conditions referencing the patient
         options = {
@@ -549,7 +563,10 @@ module Crucible
           links "#{BASE_SPEC_LINK}/patient.html#search"
           validates resource: "Patient", methods: ["search"]
         }
-        skip 'Could not create a patient in setup.' unless @patient_id
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/307'
+        
+        assert @patient_id, 'Could not create a patient in setup.'
 
         # next, we're going execute a series of searches for conditions referencing the patient
         options = {
@@ -580,7 +597,10 @@ module Crucible
           links "#{BASE_SPEC_LINK}/observation.html#search"
           validates resource: "Observation", methods: ["search"]
         }
-        skip 'Could not create Observations in setup.' unless (@obs_a && @obs_b && @obs_c && @obs_d)
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/308'
+
+        assert (@obs_a && @obs_b && @obs_c && @obs_d), 'Could not create Observations in setup.'
 
         options = {
           :search => {
@@ -616,7 +636,10 @@ module Crucible
           links "#{BASE_SPEC_LINK}/observation.html#search"
           validates resource: "Observation", methods: ["search"]
         }
-        skip 'Could not create Observations in setup.' unless (@obs_a && @obs_e && @obs_f)
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/308'
+
+        assert (@obs_a && @obs_e && @obs_f), 'Could not create Observations in setup.'
 
         options = {
           :search => {
@@ -653,7 +676,9 @@ module Crucible
           links "#{BASE_SPEC_LINK}/patient.html#search"
           validates resource: "Patient", methods: ["search"]
         }
-        skip 'Could not find a patient to search on in setup.' unless @read_entire_feed
+
+        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
+
         # how many patients in the bundle have no gender?
         expected = 0
         @entries.each do |entry|
@@ -705,6 +730,9 @@ module Crucible
           links "#{BASE_SPEC_LINK}/patient.html#search"
           validates resource: "Patient", methods: ["search"]
         }
+
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/309'
+
         # a malformed parameters are non-existing parameters, and they should be ignored
         options = {
           :search => {
