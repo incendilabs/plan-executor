@@ -24,8 +24,9 @@ module Crucible
       end
 
       def tests
-        tests = @suite_engine.tests.concat @testscript_engine.tests
+        tests = @suite_engine.tests
         tests.sort{|t1,t2| t1.id <=> t2.id }
+        tests.concat @testscript_engine.tests
       end
 
       # finds a test by class name for suites, and by filename for testscript

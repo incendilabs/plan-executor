@@ -70,7 +70,7 @@ module Crucible
         # script_files = Dir.glob(path)
         # get all the Connectathon TestScripts
         path = File.join(root, 'scripts', 'connectathon', '**/*.xml')
-        script_files = Dir.glob(path)
+        script_files = Dir.glob(path).sort_by { |word| word.downcase }
 
         script_files.each do |f|
           begin
