@@ -15,7 +15,7 @@ module Crucible
         @tags.append('argonaut')
         @tags.append('connectathon')
         @category = {id: 'core_functionality', title: 'Core Functionality'}
-        @supported_versions = [:stu3]
+        @supported_versions = [:notsupported]
       end
 
       def setup
