@@ -556,7 +556,7 @@ module Crucible
               resource = @response_map[assertion.sourceId].try(:resource) || FHIR.from_contents(@response_map[assertion.sourceId].body) if resource.nil?
             end
             begin
-              unless FluentPath.evaluate(assertion.expression, resource.to_hash)
+              unless FluentPath::STU3.evaluate(assertion.expression, resource.to_hash)
                 raise AssertionException.new("Expression did not evaluate to true: #{assertion.expression}", assertion.expression)
               end
             rescue => fpe
@@ -571,7 +571,7 @@ module Crucible
               raise AssertionException.new("compareToSourceExpression requires sourceId: #{assertion.to_json}")
             end
             begin
-              unless FluentPath.evaluate(assertion.compareToSourceExpression, resource.to_hash)
+              unless FluentPath::STU3.evaluate(assertion.compareToSourceExpression, resource.to_hash)
                 raise AssertionException.new("Expression did not evaluate to true: #{assertion.compareToSourceExpression}", assertion.compareToSourceExpression)
               end
             rescue => fpe
