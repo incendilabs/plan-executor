@@ -10,7 +10,7 @@ GIT
 
 GIT
   remote: https://github.com/incendilabs/fhir_stu3_models.git
-  revision: fbf92eafc091e2580550c576a99ad8bbc3d57c0d
+  revision: 71db01196b6cafe2310498135849cae356fe6f44
   specs:
     fhir_stu3_models (3.0.1)
       bcp47 (>= 0.3)
