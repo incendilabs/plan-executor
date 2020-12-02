@@ -381,6 +381,7 @@ module Crucible
         when 'search'
           if operation.url.nil?
             params = extract_operation_parameters(operation)
+            params[:_format] = format
             @last_response = @client.search "FHIR::#{operation.resource}".constantize, {search: {parameters: params}}, format
           else
             url = replace_variables(operation.url)
@@ -404,6 +405,7 @@ module Crucible
 
           fixture = @fixtures[operation.sourceId]
           fixture.id = replace_variables(target_id) if fixture.id.nil?
+          fixture.id = replace_variables(fixture.id)
           @last_response = @client.update fixture, replace_variables(target_id), format
         when 'transaction'
           result.result = 'error'
@@ -543,9 +545,10 @@ module Crucible
             call_assertion(:assert_response_code, @last_response, CODE_MAP[assertion.response])
 
           when !assertion.validateProfileId.nil?
-            profile_uri = @testscript.profile.first{|p| p.id = assertion.validateProfileId}.reference
-            reply = @client.validate(@last_response.resource,{profile_uri: profile_uri})
-            call_assertion(:assert_valid_profile, reply.response, @last_response.resource.class)
+            log 'Skipping profile validation: https://github.com/FirelyTeam/spark/issues/205'
+            # profile_uri = @testscript.profile.first{|p| p.id = assertion.validateProfileId}.reference
+            # reply = @client.validate(@last_response.resource,{profile_uri: profile_uri})
+            # call_assertion(:assert_valid_profile, reply.response, @last_response.resource.class)
 
           when !assertion.expression.nil?
             resource = nil
