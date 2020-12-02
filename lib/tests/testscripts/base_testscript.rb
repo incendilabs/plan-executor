@@ -376,6 +376,7 @@ module Crucible
           else
             resource_type = replace_variables(operation.resource)
             resource_id = replace_variables(operation.params)
+            resource_id = resource_id.delete_prefix("/") if resource_id
             @last_response = @client.read "FHIR::#{resource_type}".constantize, resource_id, format
           end
         when 'search'
@@ -392,7 +393,7 @@ module Crucible
           fixture = @fixtures[operation.targetId]
           @last_response = @client.resource_instance_history(fixture.class,target_id)
         when 'create'
-          @last_response = @client.base_create(@fixtures[operation.sourceId], requestHeaders, format)
+          @last_response = @client.base_create(@fixtures[operation.sourceId], requestHeaders, format, {accept: format})
           @id_map[operation.sourceId] = @last_response.id
         when 'update','updateCreate'
           target_id = nil
