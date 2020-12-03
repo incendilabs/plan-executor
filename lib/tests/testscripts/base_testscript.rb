@@ -189,6 +189,11 @@ module Crucible
       # internal TestResult class.
       def execute_test_methods
         @testreport = testreport_template
+        if @testscript.variable.any? { |v| v.hint }
+          FHIR.logger.error "Skipping testscript #{@testscript.id} containing variables that require manual input"
+          @testreport.status = 'skip'
+          return @testreport
+        end
         begin
           @testreport.setup = setup if respond_to?(:setup) && !@metadata_only
         rescue AssertionException => e
