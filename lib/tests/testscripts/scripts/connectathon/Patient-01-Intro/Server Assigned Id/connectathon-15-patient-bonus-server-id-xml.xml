@@ -207,6 +207,7 @@
 			<assert>
 				<description value="Confirm that the returned resource contains the expected retained elements and values. Warning only to provide users with reviewable results."/>
 				<minimumId value="patient-create-bonus-PeterChalmers-min"/>
+				<warningOnly value="true"/>
 			</assert>
 		</action>
 		<action>
@@ -317,6 +318,7 @@
 				<description value="Confirm that read returns updated version and that update did not delete previously created fields. Warning only to provide users with reviewable results."/>
 				<minimumId value="patient-update-bonus1-PeterChalmers-min"/>
 				<sourceId value="read-update-bonus1-response"/>
+				<warningOnly value="true"/>
 			</assert>
 		</action>
 		<action>
@@ -434,6 +436,7 @@
 				<description value="Confirm that read returns updated version and that update did not delete previously created fields. Warning only to provide users with reviewable results."/>
 				<minimumId value="patient-update-bonus2-PeterChalmers-min"/>
 				<sourceId value="read-update-bonus2-response"/>
+				<warningOnly value="true"/>
 			</assert>
 		</action>
 		<action>
