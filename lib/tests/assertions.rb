@@ -221,9 +221,16 @@ module Crucible
         raise "Could not retrieve Resource as XML from response" if resource_doc.root.nil?
         resource_doc.root.add_namespace_definition('fhir', 'http://hl7.org/fhir')
 
+        resource_node = resource_doc.root
+        if resource_node.name == "Bundle"
+          resource_node = resource_doc.xpath("//fhir:entry/fhir:resource/*").first
+          resource_node.add_namespace_definition('fhir', 'http://hl7.org/fhir')
+        end
+
         fixture_doc = Nokogiri::XML(fixture_xml)
         raise "Could not retrieve Resource as XML from fixture" if fixture_doc.root.nil?
         fixture_doc.root.add_namespace_definition('fhir', 'http://hl7.org/fhir')
+        fixture_node = fixture_doc.root
 
         # FIXME: This doesn't seem to work for a simple case...needs more work!
         # diffs = []
@@ -233,7 +240,7 @@ module Crucible
         # diffs.empty? # this returns a list with d2 in it...
 
         diffs = []
-        fixture_doc.diff(resource_doc, :removed => true){|change, node| diffs << node.to_xml}
+        fixture_node.diff(resource_node, :removed => true){|change, node| diffs << node.to_xml}
         diffs.select!{|d| d.strip.length > 0}
 
         unless assertion_negated( diffs.empty? )
