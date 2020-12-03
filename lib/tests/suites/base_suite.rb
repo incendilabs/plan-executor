@@ -55,16 +55,6 @@ module Crucible
         end
       end
 
-      def version_namespace
-        if @client.fhir_version.to_s.upcase == 'DSTU2'
-          "FHIR::DSTU2".constantize
-        elsif @client.fhir_version.to_s.upcase == 'STU3'
-          "FHIR::STU3".constantize
-        else
-          "FHIR".constantize
-        end
-      end
-
       def self.get_resource(fhir_version, resource)
         if fhir_version.to_s.upcase == 'DSTU2'
           "FHIR::DSTU2::#{resource}".constantize

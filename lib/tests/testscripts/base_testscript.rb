@@ -371,7 +371,7 @@ module Crucible
           else
             resource_type = replace_variables(operation.resource)
             resource_id = replace_variables(operation.params)
-            @last_response = @client.read "FHIR::#{resource_type}".constantize, id_from_path(resource_id), format
+            @last_response = @client.read "#{version_namespace}::#{resource_type}".constantize, id_from_path(resource_id), format
           end
         when 'vread'
           if operation.url
@@ -382,16 +382,16 @@ module Crucible
             resource_type = replace_variables(operation.resource)
             resource_id = replace_variables(operation.params)
             resource_id = resource_id.delete_prefix("/") if resource_id
-            @last_response = @client.read "FHIR::#{resource_type}".constantize, resource_id, format
+            @last_response = @client.read "#{version_namespace}::#{resource_type}".constantize, resource_id, format
           end
         when 'search'
           if operation.url.nil?
             params = extract_operation_parameters(operation)
             params[:_format] = format
-            @last_response = @client.search "FHIR::#{operation.resource}".constantize, {search: {parameters: params}}, format
+            @last_response = @client.search "#{version_namespace}::#{operation.resource}".constantize, {search: {parameters: params}}, format
           else
             url = replace_variables(operation.url)
-            @last_response = @client.search "FHIR::#{operation.resource}".constantize, url: url #todo implement URL
+            @last_response = @client.search "#{version_namespace}::#{operation.resource}".constantize, url: url #todo implement URL
           end
         when 'history'
           target_id = @id_map[operation.targetId]
@@ -422,7 +422,7 @@ module Crucible
         when 'delete'
           if operation.targetId.nil?
             params = replace_variables(operation.params)
-            @last_response = @client.destroy "FHIR::#{operation.resource}".constantize, nil, params: params
+            @last_response = @client.destroy "#{version_namespace}::#{operation.resource}".constantize, nil, params: params
           else
             @last_response = @client.destroy @fixtures[operation.targetId].class, @id_map[operation.targetId]
             @id_map.delete(operation.targetId)
@@ -450,7 +450,7 @@ module Crucible
           # @last_response = @client.value_set_code_validation(options)
         when 'empty'
           if !operation.params.nil? && !operation.resource.nil?
-            resource = "FHIR::#{operation.resource}".constantize 
+            resource = "#{version_namespace}::#{operation.resource}".constantize
             @last_response = @client.read resource, nil, FORMAT_MAP[operation.accept], nil, params: replace_variables(operation.params)
           end
         else
@@ -542,7 +542,7 @@ module Crucible
 
             call_assertion(:assert_operator, operator, expected_value, actual_value)
           when !assertion.resource.nil?
-            call_assertion(:assert_resource_type, @last_response, "FHIR::#{assertion.resource}".constantize)
+            call_assertion(:assert_resource_type, @last_response, "#{version_namespace}::#{assertion.resource}".constantize)
 
           when !assertion.responseCode.nil?
             call_assertion(:assert_operator, operator, assertion.responseCode, @last_response.response[:code].to_s)

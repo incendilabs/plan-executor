@@ -49,6 +49,16 @@ module Crucible
         @teardown_requests = []
       end
 
+      def version_namespace
+        if @client.fhir_version.to_s.upcase == 'DSTU2'
+          "FHIR::DSTU2".constantize
+        elsif @client.fhir_version.to_s.upcase == 'STU3'
+          "FHIR::STU3".constantize
+        else
+          "FHIR".constantize
+        end
+      end
+
       def multiserver
         false
       end
