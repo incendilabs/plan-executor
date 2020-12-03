@@ -1,5 +1,26 @@
 module Crucible
   module Tests
+    class Decorate
+      def initialize(method)
+        @method_name = method.to_sym
+      end
+
+      def self.method_named(method)
+        new method
+      end
+
+      def on_object(object, &block)
+        @object ||= object
+        @original_method ||= @object.method(@method_name).unbind
+        method = @original_method.bind(@object)
+        @object.define_singleton_method(@method_name) do
+          original_method_return_value = method.call
+          block.call(original_method_return_value)
+        end
+        self
+      end
+    end
+
     class BaseTestScript < BaseTest
       
       FORMAT_MAP = {
@@ -398,7 +419,9 @@ module Crucible
           fixture = @fixtures[operation.targetId]
           @last_response = @client.resource_instance_history(fixture.class,target_id)
         when 'create'
-          @last_response = @client.base_create(@fixtures[operation.sourceId], requestHeaders, format, {accept: format})
+          resource = @fixtures[operation.sourceId]
+          Decorate.method_named(:to_xml).on_object(resource) { |xml| replace_variables(xml) }
+          @last_response = @client.base_create(resource, requestHeaders, format, {accept: format})
           @id_map[operation.sourceId] = @last_response.id
         when 'update','updateCreate'
           target_id = nil
