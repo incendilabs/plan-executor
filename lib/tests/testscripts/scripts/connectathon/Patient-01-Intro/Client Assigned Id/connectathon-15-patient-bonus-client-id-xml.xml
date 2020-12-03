@@ -453,7 +453,7 @@
 			<assert>
 				<description value="Additional confirmation that birthDate extension patient-birthTime got updated to the expected value."/>
 				<operator value="contains"/>
-				<path value="Patient/birthDate/extension[@url='http://hl7.org/fhir/StructureDefinition/patient-birthTime']/valueDateTime"/>
+				<path value="Patient/birthDate"/>
 				<value value="1975-01-02"/>
 			</assert>
 		</action>
