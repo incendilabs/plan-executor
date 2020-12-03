@@ -287,17 +287,18 @@ module Crucible
           validates resource: 'Patient', methods: ['read']
         }
 
-        # There's no such a strict requirement in DSTU2 spec.
-        # http://hl7.org/fhir/DSTU2/http.html#mime-type
-        skip 'There\'s no such a strict requirement in DSTU2/STU3 spec' if fhir_version == :dstu2 || fhir_version == :stu3
+        if fhir_version == :dstu2 || fhir_version == :stu3
+          # There's no such a strict requirement in DSTU2 spec.
+          # http://hl7.org/fhir/DSTU2/http.html#mime-type
+        else
+          @client.use_format_param = false
+          reply = @client.read_feed(get_resource(:Patient),'application/foobar')
 
-        @client.use_format_param = false
-        reply = @client.read_feed(get_resource(:Patient),'application/foobar')
-
-        # Per http://hl7.org/fhir/http.html#mime-type (on 3/15/19):
-        # 406 Not Acceptable is the appropriate response when the Accept header requests a format that the server does not support, 
-        # and 415 Unsupported Media Type when the client posts a format that is not supported to the server.
-        assert( (reply.code==406), "406 Not Acceptable is the appropriate response when the Accept header requests a format that the server does not support. Received #{reply.code}.")
+          # Per http://hl7.org/fhir/http.html#mime-type (on 3/15/19):
+          # 406 Not Acceptable is the appropriate response when the Accept header requests a format that the server does not support,
+          # and 415 Unsupported Media Type when the client posts a format that is not supported to the server.
+          assert( (reply.code==406), "406 Not Acceptable is the appropriate response when the Accept header requests a format that the server does not support. Received #{reply.code}.")
+        end
       end
 
       test 'FT08', 'Request invalid mime-type using _format' do
@@ -307,18 +308,19 @@ module Crucible
           validates resource: 'Patient', methods: ['read']
         }
 
-        # There's no such a strict requirement in DSTU2 spec.
-        # http://hl7.org/fhir/DSTU2/http.html#mime-type
-        skip 'There\'s no such a strict requirement in DSTU2/STU3 spec' if fhir_version == :dstu2 || fhir_version == :stu3
+        if fhir_version == :dstu2 || fhir_version == :stu3
+          # There's no such a strict requirement in DSTU2 spec.
+          # http://hl7.org/fhir/DSTU2/http.html#mime-type
+        else
+          @client.use_format_param = true
+          reply = @client.read_feed(get_resource(:Patient),'application/foobar')
+          @client.use_format_param = false
 
-        @client.use_format_param = true
-        reply = @client.read_feed(get_resource(:Patient),'application/foobar')
-        @client.use_format_param = false
-
-        # Per http://hl7.org/fhir/http.html#mime-type (on 3/15/19):
-        # 406 Not Acceptable is the appropriate response when the Accept header requests a format that the server does not support, 
-        # and 415 Unsupported Media Type when the client posts a format that is not supported to the server.
-        assert( (reply.code==406), "406 Not Acceptable is the appropriate response when the Accept header requests a format that the server does not support. Received #{reply.code}.")
+          # Per http://hl7.org/fhir/http.html#mime-type (on 3/15/19):
+          # 406 Not Acceptable is the appropriate response when the Accept header requests a format that the server does not support,
+          # and 415 Unsupported Media Type when the client posts a format that is not supported to the server.
+          assert( (reply.code==406), "406 Not Acceptable is the appropriate response when the Accept header requests a format that the server does not support. Received #{reply.code}.")
+        end
       end
 
       private
