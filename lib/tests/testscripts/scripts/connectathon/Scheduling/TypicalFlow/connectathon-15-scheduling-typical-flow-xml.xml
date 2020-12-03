@@ -676,13 +676,13 @@
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected start datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).start.first() = @2016-05-09T09:00:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).start.first() = &quot;2016-05-09T09:00:00Z&quot;"/>
 			</assert>
 		</action>
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected end datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).end.first() = @2016-05-09T09:45:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).end.first() = &quot;2016-05-09T09:45:00Z&quot;"/>
 			</assert>
 		</action>
 
@@ -759,13 +759,13 @@
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected start datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).start.first() = @2016-05-09T10:00:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).start.first() = &quot;@2016-05-09T10:00:00Z&quot;"/>
 			</assert>
 		</action>
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected end datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).end.first() = @2016-05-09T10:45:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).end.first() = &quot;@2016-05-09T10:45:00Z&quot;"/>
 			</assert>
 		</action>
 
@@ -842,13 +842,13 @@
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected start datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).start.first() = @2016-05-09T11:00:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).start.first() = &quot;@2016-05-09T11:00:00Z&quot;"/>
 			</assert>
 		</action>
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected end datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).end.first() = @2016-05-09T11:45:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).end.first() = &quot;@2016-05-09T11:45:00Z&quot;"/>
 			</assert>
 		</action>
 
@@ -925,13 +925,13 @@
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected start datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).start.first() = @2016-05-09T13:00:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).start.first() = &quot;@2016-05-09T13:00:00Z&quot;"/>
 			</assert>
 		</action>
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected end datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).end.first() = @2016-05-09T13:45:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).end.first() = &quot;@2016-05-09T13:45:00Z&quot;"/>
 			</assert>
 		</action>
 
@@ -1008,13 +1008,13 @@
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected start datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).start.first() = @2016-05-09T14:00:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).start.first() = &quot;@2016-05-09T14:00:00Z&quot;"/>
 			</assert>
 		</action>
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected end datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).end.first() = @2016-05-09T14:45:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).end.first() = &quot;@2016-05-09T14:45:00Z&quot;"/>
 			</assert>
 		</action>
 
@@ -1091,13 +1091,13 @@
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected start datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).start.first() = @2016-05-09T15:00:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).start.first() = &quot;@2016-05-09T15:00:00Z&quot;"/>
 			</assert>
 		</action>
 		<action>
 			<assert>
 				<description value="Confirm that the returned bundle first entry contains the expected end datetime value."/>
-				<expression value="Bundle.entry.select(resource as Slot).end.first() = @2016-05-09T15:45:00Z"/>
+				<expression value="Bundle.entry.select(resource as Slot).end.first() = &quot;@2016-05-09T15:45:00Z&quot;"/>
 			</assert>
 		</action>
 	</test>
