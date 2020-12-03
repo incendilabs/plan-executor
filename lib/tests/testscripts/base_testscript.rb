@@ -19,6 +19,13 @@ module Crucible
         end
         self
       end
+
+      def undo
+        method = @original_method.bind(@object)
+        @object.define_singleton_method(@method_name) do
+          method.call
+        end
+      end
     end
 
     class BaseTestScript < BaseTest
@@ -420,9 +427,11 @@ module Crucible
           @last_response = @client.resource_instance_history(fixture.class,target_id)
         when 'create'
           resource = @fixtures[operation.sourceId]
-          Decorate.method_named(:to_xml).on_object(resource) { |xml| replace_variables(xml) }
+          decorator = Decorate.method_named(:to_xml)
+          decorator.on_object(resource) { |xml| replace_variables(xml) }
           @last_response = @client.base_create(resource, requestHeaders, format, {accept: format})
           @id_map[operation.sourceId] = @last_response.id
+          decorator.undo
         when 'update','updateCreate'
           target_id = nil
           
