@@ -366,7 +366,7 @@ module Crucible
             @last_response = @client.read @fixtures[operation.targetId].class, @id_map[operation.targetId], format
           elsif operation.url
             @last_response = @client.get replace_variables(operation.url), @client.fhir_headers({ format: format})
-            @last_response.resource = FHIR.from_contents(@last_response.body)
+            @last_response.resource = version_namespace.from_contents(@last_response.body)
             @last_response.resource_class = @last_response.resource.class
           else
             resource_type = replace_variables(operation.resource)
@@ -376,7 +376,7 @@ module Crucible
         when 'vread'
           if operation.url
             @last_response = @client.get replace_variables(operation.url), @client.fhir_headers({ format: format})
-            @last_response.resource = FHIR.from_contents(@last_response.body)
+            @last_response.resource = version_namespace.from_contents(@last_response.body)
             @last_response.resource_class = @last_response.resource.class
           else
             resource_type = replace_variables(operation.resource)
@@ -507,17 +507,17 @@ module Crucible
             actual_value = nil
             resource = nil
             if assertion.sourceId.nil?
-              resource = @last_response.try(:resource) || FHIR.from_contents(@last_response.body)
+              resource = @last_response.try(:resource) || version_namespace.from_contents(@last_response.body)
             else
               resource = @fixtures[assertion.sourceId]
-              resource = @response_map[assertion.sourceId].try(:resource) || FHIR.from_contents(@response_map[assertion.sourceId].body) if resource.nil?
+              resource = @response_map[assertion.sourceId].try(:resource) || version_namespace.from_contents(@response_map[assertion.sourceId].body) if resource.nil?
             end
             actual_value = extract_value_by_path(resource, assertion.path)
 
             expected_value = replace_variables(assertion.value)
             unless assertion.compareToSourceId.nil?
               resource = @fixtures[assertion.compareToSourceId]
-              resource = @response_map[assertion.compareToSourceId].try(:resource) || FHIR.from_contents(@response_map[assertion.compareToSourceId].body) if resource.nil?
+              resource = @response_map[assertion.compareToSourceId].try(:resource) || version_namespace.from_contents(@response_map[assertion.compareToSourceId].body) if resource.nil?
               expected_value = extract_value_by_path(resource, assertion.path)
             end
 
@@ -527,7 +527,7 @@ module Crucible
             resource = nil
             if assertion.sourceId
               resource = @fixtures[assertion.sourceId]
-              resource = @response_map[assertion.sourceId].try(:resource) || FHIR.from_contents(@response_map[assertion.sourceId].body) if resource.nil?
+              resource = @response_map[assertion.sourceId].try(:resource) || version_namespace.from_contents(@response_map[assertion.sourceId].body) if resource.nil?
             else
               raise AssertionException.new("compareToSourcePath requires sourceId: #{assertion.to_json}")
             end
@@ -536,7 +536,7 @@ module Crucible
             expected_value = replace_variables(assertion.value)
             unless assertion.compareToSourceId.nil?
               resource = @fixtures[assertion.compareToSourceId]
-              resource = @response_map[assertion.compareToSourceId].try(:resource) || FHIR.from_contents(@response_map[assertion.compareToSourceId].body) if resource.nil?
+              resource = @response_map[assertion.compareToSourceId].try(:resource) || version_namespace.from_contents(@response_map[assertion.compareToSourceId].body) if resource.nil?
               expected_value = extract_value_by_path(resource, assertion.compareToSourcePath)
             end
 
@@ -559,10 +559,10 @@ module Crucible
           when !assertion.expression.nil?
             resource = nil
             if assertion.sourceId.nil?
-              resource = @last_response.try(:resource) || FHIR.from_contents(@last_response.body)
+              resource = @last_response.try(:resource) || version_namespace.from_contents(@last_response.body)
             else
               resource = @fixtures[assertion.sourceId]
-              resource = @response_map[assertion.sourceId].try(:resource) || FHIR.from_contents(@response_map[assertion.sourceId].body) if resource.nil?
+              resource = @response_map[assertion.sourceId].try(:resource) || version_namespace.from_contents(@response_map[assertion.sourceId].body) if resource.nil?
             end
             begin
               unless FluentPath::STU3.evaluate(assertion.expression, resource.to_hash)
@@ -575,7 +575,7 @@ module Crucible
             resource = nil
             if assertion.sourceId
               resource = @fixtures[assertion.sourceId]
-              resource = @response_map[assertion.sourceId].try(:resource) || FHIR.from_contents(@response_map[assertion.sourceId].body) if resource.nil?
+              resource = @response_map[assertion.sourceId].try(:resource) || version_namespace.from_contents(@response_map[assertion.sourceId].body) if resource.nil?
             else
               raise AssertionException.new("compareToSourceExpression requires sourceId: #{assertion.to_json}")
             end
@@ -626,7 +626,7 @@ module Crucible
               resource = nil
               variable_source_response = @response_map[var.sourceId]
               unless variable_source_response.nil?
-                resource = variable_source_response.try(:resource) || FHIR.from_contents(variable_source_response.body)
+                resource = variable_source_response.try(:resource) || version_namespace.from_contents(variable_source_response.body)
               else
                 resource = @fixtures[var.sourceId]
               end
@@ -721,7 +721,7 @@ module Crucible
           file = File.open(filepath, 'r:UTF-8', &:read)
           file.encode!('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
           file = preprocess(file) if file.include?('${')
-          resource = FHIR.from_contents(file)
+          resource = version_namespace.from_contents(file)
         end
 
         resource
