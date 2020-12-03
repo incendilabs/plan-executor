@@ -45,7 +45,7 @@
 	</variable>
 	<variable>
 		<name value="OrganizationSearchNameCriteria"/>
-		<defaultValue value="Saint Luke''s Hospital of Kansas City"/>
+		<defaultValue value="Saint Luke's Hospital of Kansas City"/>
 	</variable>
 	<variable>
 		<name value="OrganizationResourceId"/>
