@@ -31,7 +31,7 @@ module Crucible
         super(client1, client2)
         @tags.append('argonaut')
         @category = {id: 'argonaut', title: 'Argonaut'}
-        @supported_versions = [:dstu2]
+        @supported_versions = [:notsupported]
       end
 
       def setup
@@ -77,8 +77,8 @@ module Crucible
 
         options = nil
         conformance.rest.each do |rest|
-          skip unless !rest.security.nil? # "could not get authorization extensions, no security section"
-          skip unless !rest.security.service.nil? #, "could not get authorization extensions, no security/service section"
+          assert !rest.security.nil?, "could not get authorization extensions, no security section"
+          assert !rest.security.service.nil?, "could not get authorization extensions, no security/service section"
           rest.security.service.each do |service|
             assert !service.coding.nil?, "could not get authorization extensions, no codings on sercurity/service"
             found_oauth2_code = false

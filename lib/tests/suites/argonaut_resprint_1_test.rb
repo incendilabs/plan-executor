@@ -29,7 +29,7 @@ module Crucible
         @tags.append('argonaut')
         @category = {id: 'argonaut', title: 'Argonaut'}
         @status_codes = ['active', 'unconfirmed', 'confirmed', 'inactive', 'resolved', 'refuted', 'entered-in-error']
-        @supported_versions = [:dstu2]
+        @supported_versions = [:notsupported]
       end
 
       def setup
@@ -60,7 +60,7 @@ module Crucible
           @patient = nil
         end
 
-        skip "No patient record found for testing" if !@patient_id
+        skip if !@patient_id
 
         reply = @client.read(FHIR::DSTU2::Patient, @patient_id)
         assert_response_ok(reply)
@@ -75,7 +75,7 @@ module Crucible
         metadata {
           define_metadata('search')
         }
-        skip "No patient record found for testing" if !@patient
+        skip if !@patient
         get_patient_by_param(:identifier => @patient[:identifier].first.try(:value))
       end
 
@@ -83,7 +83,7 @@ module Crucible
         metadata {
           define_metadata('search')
         }
-        skip "No patient record found for testing" if !@patient
+        skip if !@patient
         get_patient_by_param({ :identifier => @patient[:identifier].first.try(:value) }, false)
       end
 
@@ -91,7 +91,7 @@ module Crucible
         metadata {
           define_metadata('search')
         }
-        skip "No patient record found for testing" if !@patient
+        skip if !@patient
         family = @patient[:name].first.try(:family).try(:first)
         given = @patient[:name].first.try(:given).try(:first)
         assert family, "Patient family name not returned"
@@ -103,7 +103,7 @@ module Crucible
         metadata {
           define_metadata('search')
         }
-        skip "No patient record found for testing" if !@patient
+        skip if !@patient
         family = @patient[:name].first.try(:family).try(:first)
         given = @patient[:name].first.try(:given).try(:first)
         assert family, "Patient family name not provided"
@@ -115,7 +115,7 @@ module Crucible
         metadata {
           define_metadata('search')
         }
-        skip "No patient record found for testing" if !@patient
+        skip if !@patient
         name = @patient[:name].first.try(:family).try(:first)
         gender = @patient[:gender]
         assert name, "Patient name not provided"
@@ -127,7 +127,7 @@ module Crucible
         metadata {
           define_metadata('search')
         }
-        skip "No patient record found for testing" if !@patient
+        skip if !@patient
         name = @patient[:name].first.try(:family).try(:first)
         gender = @patient[:gender]
         assert name, "Patient name not provided"
@@ -139,7 +139,7 @@ module Crucible
         metadata {
           define_metadata('search')
         }
-        skip "No patient record found for testing" if !@patient
+        skip if !@patient
         birthdate = @patient[:birthDate]
         gender = @patient[:gender]
         assert birthdate, "Patient birthdate not provided"
@@ -151,7 +151,7 @@ module Crucible
         metadata {
           define_metadata('search')
         }
-        skip "No patient record found for testing" if !@patient
+        skip if !@patient
         birthdate = @patient[:birthDate]
         gender = @patient[:gender]
         assert birthdate, "Patient birthdate not provided"
@@ -167,8 +167,6 @@ module Crucible
           validates resource: 'Patient', methods: ['read', 'search']
           validates resource: 'AllergyIntolerance', methods: ['read', 'search']
         }
-
-        skip "No patient record found for testing" if !@patient
 
         assert !@client.client.try(:params).nil?, "The client was not authorized for the test"
         assert @client.client.params["patient"], "No patient parameter was passed to the client"
@@ -205,8 +203,6 @@ module Crucible
           requires resource: "Patient", methods: ["read", "search"]
           validates resource: "Patient", methods: ["read", "search"]
         }
-
-        skip "No patient record found for testing" if !@patient
 
         assert !@client.client.try(:params).nil?, "The client was not authorized for the test"
         assert @client.client.params["patient"], "No patient parameter was passed to the client"

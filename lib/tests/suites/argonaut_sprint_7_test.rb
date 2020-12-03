@@ -24,7 +24,7 @@ module Crucible
         @loinc_codes = ['8716-3', '9279-1', '8867-4', '59408-5', '8310-5', '8302-2', '8306-3', '8287-5', '3141-9', '39156-5', '3140-1', '55284-4', '8480-6', '8462-4', '8478-0']
         @loinc_code_units = {'8716-3' => nil, '9279-1' => '/min', '8867-4' => '/min', '59408-5' => '%', '8310-5' => 'Cel', '8302-2' => 'cm', '8306-3' => 'cm', '8287-5' => 'cm', '3141-9' => 'g, kg', '39156-5' => 'kg/m2', '3140-1' => 'm2', '8478-0' => 'mm[Hg]'}
         @category = {id: 'argonautp1', title: 'Argonaut Phase 1'}
-        @supported_versions = [:dstu2]
+        @supported_versions = [:notsupported]
       end
 
 
@@ -38,8 +38,8 @@ module Crucible
           validates resource: "Patient", methods: ["read"]
         }
 
-        skip "The client was not authorized for the test" if @client.client.try(:params).nil?
-        skip "No patient parameter was passed to the client" unless @client.client.params["patient"]
+        assert !@client.client.try(:params).nil?, "The client was not authorized for the test"
+        assert @client.client.params["patient"], "No patient parameter was passed to the client"
 
         patient_id = @client.client.params["patient"]
 
@@ -59,8 +59,8 @@ module Crucible
           validates resource: "Patient", methods: ["search"]
         }
 
-        skip "The client was not authorized for the test" if @client.client.try(:params).nil?
-        skip "No patient parameter was passed to the client" unless @client.client.params["patient"]
+        assert !@client.client.try(:params).nil?, "The client was not authorized for the test"
+        assert @client.client.params["patient"], "No patient parameter was passed to the client"
 
         patient_id = @client.client.params["patient"]
 
@@ -85,8 +85,8 @@ module Crucible
           validates resource: "Patient", methods: ["read", "search"]
         }
 
-        skip "The client was not authorized for the test" if @client.client.try(:params).nil?
-        skip "No patient parameter was passed to the client" unless @client.client.params["patient"]
+        assert !@client.client.try(:params).nil?, "The client was not authorized for the test"
+        assert @client.client.params["patient"], "No patient parameter was passed to the client"
 
         patient_id = @client.client.params["patient"]
 

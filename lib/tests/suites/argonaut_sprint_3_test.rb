@@ -22,7 +22,7 @@ module Crucible
         super
         @tags.append('argonaut')
         @category = {id: 'argonaut', title: 'Argonaut'}
-        @supported_versions = [:dstu2]
+        @supported_versions = [:notsupported]
       end
 
       # [SprinklerTest("AS3001", "GET patient by ID")]
@@ -33,8 +33,8 @@ module Crucible
           validates resource: "Patient", methods: ["read"]
         }
 
-        skip "The client was not authorized for the test" if @client.client.try(:params).nil?
-        skip "No patient parameter was passed to the client" unless @client.client.params["patient"]
+        assert !@client.client.try(:params).nil?, "The client was not authorized for the test"
+        assert @client.client.params["patient"], "No patient parameter was passed to the client"
 
         patient_id = @client.client.params["patient"]
 
@@ -58,8 +58,8 @@ module Crucible
           validates resource: nil, methods: ['DOCUMENTS']
         }
 
-        skip "The client was not authorized for the test" if @client.client.try(:params).nil?
-        skip "No patient parameter was passed to the client" unless @client.client.params["patient"]
+        assert !@client.client.try(:params).nil?, "The client was not authorized for the test"
+        assert @client.client.params["patient"], "No patient parameter was passed to the client"
 
         patient_id = @client.client.params["patient"]
 
@@ -96,8 +96,8 @@ module Crucible
           validates resource: nil, methods: ['DOCUMENTS']
         }
 
-        skip "The client was not authorized for the test" if @client.client.try(:params).nil?
-        skip "No patient parameter was passed to the client" unless @client.client.params["patient"]
+        assert !@client.client.try(:params).nil?, "The client was not authorized for the test"
+        assert @client.client.params["patient"], "No patient parameter was passed to the client"
 
         patient_id = @client.client.params["patient"]
 
@@ -135,8 +135,8 @@ module Crucible
           validates resource: nil, methods: ['DOCUMENTS']
         }
 
-        skip "The client was not authorized for the test" if @client.client.try(:params).nil?
-        skip "No patient parameter was passed to the client" unless @client.client.params["patient"]
+        assert !@client.client.try(:params).nil?, "The client was not authorized for the test"
+        assert @client.client.params["patient"], "No patient parameter was passed to the client"
 
         patient_id = @client.client.params["patient"]
 
@@ -175,8 +175,8 @@ module Crucible
           validates resource: nil, methods: ['DOCUMENTS']
         }
 
-        skip "The client was not authorized for the test" if @client.client.try(:params).nil?
-        skip "No patient parameter was passed to the client" unless @client.client.params["patient"]
+        assert !@client.client.try(:params).nil?, "The client was not authorized for the test"
+        assert @client.client.params["patient"], "No patient parameter was passed to the client"
 
         patient_id = @client.client.params["patient"]
 
