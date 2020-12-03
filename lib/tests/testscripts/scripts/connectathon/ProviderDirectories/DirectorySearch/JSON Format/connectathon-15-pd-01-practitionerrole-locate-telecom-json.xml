@@ -53,11 +53,11 @@
 	</variable>
 	<variable>
 		<name value="PractitionerRoleSearchSpecialtySystemCriteria"/>
-		<defaultValue value="http://hl7.org/fhir/practitioner-specialty"/>
+		<defaultValue value="http://snomed.info/sct"/>
 	</variable>
 	<variable>
 		<name value="PractitionerRoleSearchSpecialtyValueCriteria"/>
-		<defaultValue value="cardio"/>
+		<defaultValue value="394579002"/>
 	</variable>
 	<variable>
 		<name value="PractitionerRoleResourceId"/>
