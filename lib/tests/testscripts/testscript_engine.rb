@@ -8,7 +8,7 @@ module Crucible
         @client = client
         @client2 = client2
         @scripts = []
-        load_testscripts
+        load_testscripts if client.fhir_version != :dstu2 # Run tests scripts on STU3+ only.
       end
 
       def tests
