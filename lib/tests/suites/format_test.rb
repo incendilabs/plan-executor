@@ -28,7 +28,7 @@ module Crucible
 
       # Create a patient and store its details for format requests
       def setup
-        @cached_conformance = @client.capability_statement
+        @cached_conformance = @client.capability_statement_new
         @supports_xml = @cached_conformance.format.any?{|f| f.downcase.include?('xml')}
         @supports_json = @cached_conformance.format.any?{|f| f.downcase.include?('json')}
 
