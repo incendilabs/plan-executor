@@ -37,9 +37,7 @@ namespace :crucible do
     b = Benchmark.measure {
       client = FHIR::Client.new(args.url)
       client.use_dstu2 if fhir_version == :dstu2
-      # TODO: implement oauth security?
-      # options = client.get_oauth2_metadata_from_conformance
-      # set_client_secrets(client,options) unless options.empty?
+      client.setup_security
       execute_all(args.url, client, args.html_summary)
     }
     puts "Execute All completed in #{b.real} seconds."
@@ -51,8 +49,7 @@ namespace :crucible do
     require 'benchmark'
     b = Benchmark.measure {
       client = FHIR::Client.new(args.url)
-      options = client.get_oauth2_metadata_from_conformance
-      set_client_secrets(client,options) unless options.empty?
+      client.setup_security
       results = Crucible::Tests::TestScriptEngine.new(client).execute_all
       output_results results
       if args.html_summary
@@ -68,8 +65,7 @@ namespace :crucible do
     require 'benchmark'
     b = Benchmark.measure {
       client = FHIR::Client.new(args.url)
-      options = client.get_oauth2_metadata_from_conformance
-      set_client_secrets(client,options) unless options.empty?
+      client.setup_security
       engine = Crucible::Tests::TestScriptEngine.new(client)
       script = engine.find_test(args.test)
       if script.nil?
@@ -97,8 +93,7 @@ namespace :crucible do
       client.use_r4
       client.use_stu3 if fhir_version == :stu3
       client.use_dstu2 if fhir_version == :dstu2
-      options = client.get_oauth2_metadata_from_conformance
-      set_client_secrets(client,options) unless options.empty?
+      client.setup_security
       execute_test(args.url, client, args.test, args.resource, args.html_summary)
     }
     puts "Execute #{args.test} completed in #{b.real} seconds."
@@ -117,22 +112,6 @@ namespace :crucible do
     fhir_version = :stu3 if version_string.downcase == 'stu3'
     fhir_version = :dstu2 if version_string.downcase == 'dstu2'
     fhir_version
-  end
-
-  def set_client_secrets(client,options)
-    puts "Using OAuth2 Options: #{options}"
-    print 'Enter client id: '
-    client_id = STDIN.gets.chomp
-    print 'Enter client secret: '
-    client_secret = STDIN.gets.chomp
-    if client_id!="" && client_secret!=""
-      options[:client_id] = client_id
-      options[:client_secret] = client_secret
-      # set_oauth2_auth(client,secret,authorizePath,tokenPath)
-      client.set_oauth2_auth(options[:client_id],options[:client_secret],options[:authorize_url],options[:token_url])
-    else
-      puts "Ignoring OAuth2 credentials: empty id or secret. Using unsecured client..."
-    end
   end
 
   def execute_test(url, client, key, resourceType=nil, html_summary=nil)
@@ -316,8 +295,7 @@ namespace :crucible do
         client.use_r4
         client.use_stu3 if fhir_version == :stu3
         client.use_dstu2 if fhir_version == :dstu2
-        options = client.get_oauth2_metadata_from_conformance
-        set_client_secrets(client,options) unless options.empty?
+        client.setup_security
         execute_test(url, client, args.test, args.resource_type, args.html_summary)
       }
       seconds += b.real
@@ -346,8 +324,7 @@ namespace :crucible do
         client.use_r4
         client.use_stu3 if fhir_version == :stu3
         client.use_dstu2 if fhir_version == :dstu2
-        options = client.get_oauth2_metadata_from_conformance
-        set_client_secrets(client,options) unless options.empty?
+        client.setup_security
         results = execute_all(url, client)
         if args.html_summary
           generate_html_summary(url, results)
@@ -428,8 +405,7 @@ namespace :crucible do
     client.use_r4
     client.use_stu3 if fhir_version == :stu3
     client.use_dstu2 if fhir_version == :dstu2
-    options = client.get_oauth2_metadata_from_conformance
-    set_client_secrets(client,options) unless options.empty?
+    client.setup_security
     client.monitor_requirements
     test = args.test.to_sym
     execute_test(args.url, client, test, args.resource, args.html_summary)
