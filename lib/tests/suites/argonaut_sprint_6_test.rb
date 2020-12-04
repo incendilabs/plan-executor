@@ -23,7 +23,7 @@ module Crucible
         @tags.append('argonautp1')
         @loinc_codes = ['2951-2', '2823-3', '2075-0', '2028-9', '3094-0', '2160-0', '2345-7', '17861-6', '2885-2', '1751-7', '1975-2', '6768-6', '1742-6', '1920-8', '6690-2', '  789-8', ' 718-7', ' 4544-3', '787-2', '785-6', '786-4', '21000-5', '788-0', '777-3', '32207-3', '32623-1']
         @category = {id: 'argonautp1', title: 'Argonaut Phase 1'}
-        @supported_versions = [:notsupported]
+        @supported_versions = [:notsupported] # test requires patient id to be specified via patient query param
       end
 
       # [SprinklerTest("AS6001", "GET patient by ID")]

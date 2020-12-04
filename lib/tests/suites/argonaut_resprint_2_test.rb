@@ -29,7 +29,7 @@ module Crucible
         @loinc_codes = ['8716-3', '9279-1', '8867-4', '59408-5', '8310-5', '8302-2', '8306-3', '8287-5', '29463-7', '39156-5', '55284-4', '8480-6', '8462-4']
         @loinc_code_units = {'8716-3' => nil, '9279-1' => '/min', '8867-4' => '/min', '59408-5' => '%', '8310-5' => 'Cel', '8302-2' => 'cm', '8306-3' => 'cm', '8287-5' => 'cm', '29463-7' => 'g, kg', '39156-5' => 'kg/m2', '55284-4' => nil, '8480-6' => 'mm[Hg]', '8462-4' => 'mm[Hg]'}
         @smoking_codes = ['449868002', '428041000124106', '8517006', '266919005', '77176002', '266927001', '428071000124103', '428061000124105']
-        @supported_versions = [:dstu2]
+        @supported_versions = [:notsupported] # test requires patient id to be specified via patient query param
       end
 
       def setup

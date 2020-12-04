@@ -28,7 +28,7 @@ module Crucible
         super(client1, client2)
         @tags.append('argonautp1')
         @category = {id: 'argonautp1', title: 'Argonaut Phase 1'}
-        @supported_versions = [:dstu2]
+        @supported_versions = [:notsupported] # test requires patient id to be specified via patient query param
       end
 
       def setup

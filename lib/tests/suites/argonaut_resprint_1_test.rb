@@ -29,7 +29,7 @@ module Crucible
         @tags.append('argonaut')
         @category = {id: 'argonaut', title: 'Argonaut'}
         @status_codes = ['active', 'unconfirmed', 'confirmed', 'inactive', 'resolved', 'refuted', 'entered-in-error']
-        @supported_versions = [:notsupported]
+        @supported_versions = [:notsupported] # test requires patient id to be specified via patient query param
       end
 
       def setup

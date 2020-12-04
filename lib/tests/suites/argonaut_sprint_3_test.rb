@@ -22,7 +22,7 @@ module Crucible
         super
         @tags.append('argonaut')
         @category = {id: 'argonaut', title: 'Argonaut'}
-        @supported_versions = [:notsupported]
+        @supported_versions = [:notsupported] # test requires patient id to be specified via patient query param
       end
 
       # [SprinklerTest("AS3001", "GET patient by ID")]
