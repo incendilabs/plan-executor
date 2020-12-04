@@ -36,7 +36,7 @@ namespace :crucible do
     require 'benchmark'
     b = Benchmark.measure {
       client = FHIR::Client.new(args.url)
-      client.use_dstu2 if fhir_version == :dstu2
+      client.use_fhir_version(fhir_version)
       client.setup_security
       execute_all(args.url, client, args.html_summary)
     }
@@ -90,9 +90,7 @@ namespace :crucible do
     require 'benchmark'
     b = Benchmark.measure {
       client = FHIR::Client.new(args.url)
-      client.use_r4
-      client.use_stu3 if fhir_version == :stu3
-      client.use_dstu2 if fhir_version == :dstu2
+      client.use_fhir_version(fhir_version)
       client.setup_security
       execute_test(args.url, client, args.test, args.resource, args.html_summary)
     }
@@ -292,9 +290,7 @@ namespace :crucible do
       puts "```"
       b = Benchmark.measure {
         client = FHIR::Client.new(url)
-        client.use_r4
-        client.use_stu3 if fhir_version == :stu3
-        client.use_dstu2 if fhir_version == :dstu2
+        client.use_fhir_version(fhir_version)
         client.setup_security
         execute_test(url, client, args.test, args.resource_type, args.html_summary)
       }
@@ -321,9 +317,7 @@ namespace :crucible do
       puts "```"
       b = Benchmark.measure {
         client = FHIR::Client.new(url)
-        client.use_r4
-        client.use_stu3 if fhir_version == :stu3
-        client.use_dstu2 if fhir_version == :dstu2
+        client.use_fhir_version(fhir_version)
         client.setup_security
         results = execute_all(url, client)
         if args.html_summary
@@ -402,9 +396,7 @@ namespace :crucible do
     end
 
     client = FHIR::Client.new(args.url)
-    client.use_r4
-    client.use_stu3 if fhir_version == :stu3
-    client.use_dstu2 if fhir_version == :dstu2
+    client.use_fhir_version(fhir_version)
     client.setup_security
     client.monitor_requirements
     test = args.test.to_sym

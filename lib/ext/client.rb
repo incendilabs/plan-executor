@@ -9,6 +9,12 @@ module FHIR
       @requests << reply
     end
 
+    def use_fhir_version(fhir_version)
+      self.use_r4
+      self.use_stu3 if fhir_version == :stu3
+      self.use_dstu2 if fhir_version == :dstu2
+    end
+
     def monitor_requests
       return if @decorated
       @decorated = true
