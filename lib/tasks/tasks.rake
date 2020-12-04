@@ -37,8 +37,9 @@ namespace :crucible do
     b = Benchmark.measure {
       client = FHIR::Client.new(args.url)
       client.use_dstu2 if fhir_version == :dstu2
-      options = client.get_oauth2_metadata_from_conformance
-      set_client_secrets(client,options) unless options.empty?
+      # TODO: implement oauth security?
+      # options = client.get_oauth2_metadata_from_conformance
+      # set_client_secrets(client,options) unless options.empty?
       execute_all(args.url, client, args.html_summary)
     }
     puts "Execute All completed in #{b.real} seconds."
