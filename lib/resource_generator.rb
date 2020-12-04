@@ -160,7 +160,7 @@ module Crucible
 
       def self.ancestor_fhir_classes(klass,namespace)
         classes = klass.constants
-        classes.concat ancestor_fhir_classes(klass.parent, namespace) if klass.parent.name != namespace && klass.parent != Object
+        classes.concat ancestor_fhir_classes(klass.module_parent, namespace) if klass.module_parent.name != namespace && klass.module_parent != Object
         classes
       end
 
