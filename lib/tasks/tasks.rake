@@ -42,6 +42,7 @@ namespace :crucible do
       result = execute_all(args.url, client, args.output)
     }
     puts "Execute All completed in #{b.real} seconds."
+    output_results result
     print_summary result
     fail_on_error result
   end
@@ -96,6 +97,7 @@ namespace :crucible do
       result = execute_test(args.url, client, args.test, args.resource, args.output)
     }
     puts "Execute #{args.test} completed in #{b.real} seconds."
+    output_results result
     print_summary result
     fail_on_error result
   end
