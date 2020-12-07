@@ -42,7 +42,8 @@ namespace :crucible do
       result = execute_all(args.url, client, args.output)
     }
     puts "Execute All completed in #{b.real} seconds."
-    # TODO:
+    print_summary result
+    fail_on_error result
   end
 
   desc 'execute all test scripts'
@@ -87,13 +88,16 @@ namespace :crucible do
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     fhir_version = resolve_fhir_version(args.fhir_version)
     require 'benchmark'
+    result = {}
     b = Benchmark.measure {
       client = FHIR::Client.new(args.url)
       client.use_fhir_version(fhir_version)
       client.setup_security
-      execute_test(args.url, client, args.test, args.resource, args.output)
+      result = execute_test(args.url, client, args.test, args.resource, args.output)
     }
     puts "Execute #{args.test} completed in #{b.real} seconds."
+    print_summary result
+    fail_on_error result
   end
 
   desc 'metadata'
@@ -102,6 +106,28 @@ namespace :crucible do
     require 'benchmark'
     b = Benchmark.measure { puts JSON.pretty_unparse(Crucible::Tests::Executor.new(nil).extract_metadata_from_test(args.test)) }
     puts "Metadata #{args.test} completed in #{b.real} seconds."
+  end
+
+  def print_summary(result)
+    totals = Hash.new(0)
+    result.each do |(_, v)|
+      v.map { |t| t["status"] }.each_with_object(totals) { |n, h| h[n] += 1 }
+    end
+    totals.each do |(status, count)|
+      puts "#{status.upcase}: #{count}"
+    end
+  end
+
+  def fail_on_error(result)
+    if result.values.any? { |v|
+      v.any? { |t|
+        t['status'] == "error" ||
+            t['status'] == "fail" ||
+            (t['status'] == "skip" && !t['message']&.include?("TODO"))
+      }
+    }
+      exit(1)
+    end
   end
 
   def resolve_fhir_version(version_string)
