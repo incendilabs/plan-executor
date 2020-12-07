@@ -30,31 +30,30 @@ namespace :crucible do
   end
 
   desc 'execute all'
-  task :execute_all, [:url, :fhir_version, :html_summary] do |t, args|
+  task :execute_all, [:url, :fhir_version, :output] do |t, args|
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     fhir_version = resolve_fhir_version(args.fhir_version)
     require 'benchmark'
+    result = {}
     b = Benchmark.measure {
       client = FHIR::Client.new(args.url)
       client.use_fhir_version(fhir_version)
       client.setup_security
-      execute_all(args.url, client, args.html_summary)
+      result = execute_all(args.url, client, args.output)
     }
     puts "Execute All completed in #{b.real} seconds."
+    # TODO:
   end
 
   desc 'execute all test scripts'
-  task :execute_all_testscripts, [:url, :html_summary] do |t, args|
+  task :execute_all_testscripts, [:url, :output] do |t, args|
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'benchmark'
     b = Benchmark.measure {
       client = FHIR::Client.new(args.url)
       client.setup_security
       results = Crucible::Tests::TestScriptEngine.new(client).execute_all
-      output_results results
-      if args.html_summary
-        generate_html_summary(args.url, results)
-      end
+      process_results(results, args.url, args.output)
     }
     puts "Execute All completed in #{b.real} seconds."
   end
@@ -84,7 +83,7 @@ namespace :crucible do
   end
 
   desc 'execute'
-  task :execute, [:url, :fhir_version, :test, :resource, :html_summary] do |t, args|
+  task :execute, [:url, :fhir_version, :test, :resource, :output] do |t, args|
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     fhir_version = resolve_fhir_version(args.fhir_version)
     require 'benchmark'
@@ -92,7 +91,7 @@ namespace :crucible do
       client = FHIR::Client.new(args.url)
       client.use_fhir_version(fhir_version)
       client.setup_security
-      execute_test(args.url, client, args.test, args.resource, args.html_summary)
+      execute_test(args.url, client, args.test, args.resource, args.output)
     }
     puts "Execute #{args.test} completed in #{b.real} seconds."
   end
@@ -112,7 +111,7 @@ namespace :crucible do
     fhir_version
   end
 
-  def execute_test(url, client, key, resourceType=nil, html_summary=nil)
+  def execute_test(url, client, key, resourceType=nil, output=nil)
     executor = Crucible::Tests::Executor.new(client)
     test = executor.find_test(key)
     if test.nil? || (test.is_a?(Array) && test.empty?)
@@ -132,26 +131,39 @@ namespace :crucible do
       results = test.execute(Crucible::Tests::BaseSuite.get_resource(client.fhir_version, resourceType))
     end
     results = executor.execute(test) if results.nil?
-    output_results results
-    if html_summary
-      generate_html_summary(url, results)
-    end
+    process_results(results, url, output)
   end
 
-  def execute_all(url, client, html_summary=nil)
+  def execute_all(url, client, output=nil)
     executor = Crucible::Tests::Executor.new(client)
     all_results = {}
     executor.tests.each do |test|
       next if test.multiserver
       next if !test.supported_versions.include?(client.fhir_version)
       results = executor.execute(test)
-      all_results.merge! results
-      output_results results
-      if html_summary
-        generate_html_summary(url, results)
-      end
+      all_results.merge! process_results(results, url, output)
     end
     all_results
+  end
+
+  def process_results(results, url, output = nil)
+    results = convert_results(results)
+    output_formats = []
+    output_formats = output.split('|').map{|str| str.downcase} if output
+    unless output.nil?
+      generate_html_summary(url, results) if output == "true" || output_formats.include?("html") # old param syntax support
+      output_json(url, results) if output_formats.include?("json")
+    end
+    results
+  end
+
+  def convert_results(results)
+    converted = {}
+    results.each do |(k, v)|
+      v = convert_testreport_to_testresults(v) if v.is_a?(FHIR::TestReport)
+      converted[k] = v
+    end
+    converted
   end
 
   def output_results(results, metadata_only=false)
@@ -159,7 +171,6 @@ namespace :crucible do
     results.keys.each do |suite_key|
       puts suite_key
       suite = results[suite_key]
-      suite = convert_testreport_to_testresults(suite) if suite.is_a?(FHIR::TestReport)
       suite.each do |test|
         puts write_result(test['status'], test[:test_method], test['message'])
         if test['status'].upcase=='ERROR' && test['data']
@@ -242,11 +253,10 @@ namespace :crucible do
     require 'tilt'
     require 'fileutils'
     include ERB::Util
-    # Transform TestReports to TestResults
+    FileUtils::mkdir_p("html_summaries")
     results.each do |(k, v)|
       totals = Hash.new(0)
       metadata = Hash.new(0)
-      v = convert_testreport_to_testresults(v) if v.is_a?(FHIR::TestReport)
       v.map{|t| t["status"]}.each_with_object(totals) { |n, h| h[n] += 1}
       v.map{|t| {k: t["id"], v: t["validates"], s: t["status"]}}.each_with_object(metadata) do |n, h|
         n[:v].each do |val|
@@ -267,15 +277,26 @@ namespace :crucible do
       template = Tilt.new(File.join(File.dirname(__FILE__), "templates", "summary.html.erb"))
       timestamp = Time.now
       summary = template.render(self, {:results => {k => v}, :timestamp => timestamp.strftime("%D %r"), :totals => totals, :url => url, :metadata => metadata})
-      summary_file = "#{k}_#{url.gsub(/[^a-z0-9]/,'-')}_#{timestamp.strftime("%m-%d-%y_%H-%M-%S")}.html"
-      FileUtils::mkdir_p("html_summaries")
+      summary_file = output_file_name(url, k, ".html")
       File.write("html_summaries/#{summary_file}", summary)
-      system("open html_summaries/#{summary_file}")
     end
   end
 
+  def output_json(url, results)
+    FileUtils::mkdir_p("json_results")
+    results.each do |(k, v)|
+      output_file = output_file_name(url, k, ".json")
+      File.write("json_results/#{output_file}", v.to_json)
+    end
+  end
+
+  def output_file_name(url, k, suffix)
+    timestamp = Time.now
+    "#{k}_#{url.gsub(/[^a-z0-9]/,'-')}_#{timestamp.strftime("%m-%d-%y_%H-%M-%S")}#{suffix}"
+  end
+
   desc 'execute custom'
-  task :execute_custom, [:test, :fhir_version, :resource_type, :html_summary] do |t, args|
+  task :execute_custom, [:test, :fhir_version, :resource_type, :output] do |t, args|
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'benchmark'
     fhir_version = resolve_fhir_version(args.fhir_version)
@@ -292,7 +313,7 @@ namespace :crucible do
         client = FHIR::Client.new(url)
         client.use_fhir_version(fhir_version)
         client.setup_security
-        execute_test(url, client, args.test, args.resource_type, args.html_summary)
+        execute_test(url, client, args.test, args.resource_type, args.output)
       }
       seconds += b.real
       puts "```"
@@ -302,7 +323,7 @@ namespace :crucible do
   end
 
   desc 'execute all custom'
-  task :execute_all_custom, [:fhir_version, :html_summary] do |t, args|
+  task :execute_all_custom, [:fhir_version, :output] do |t, args|
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'benchmark'
     fhir_version = resolve_fhir_version(args.fhir_version)
@@ -319,10 +340,7 @@ namespace :crucible do
         client = FHIR::Client.new(url)
         client.use_fhir_version(fhir_version)
         client.setup_security
-        results = execute_all(url, client)
-        if args.html_summary
-          generate_html_summary(url, results)
-        end
+        results = execute_all(url, client, output)
       }
       seconds += b.real
       puts "```"

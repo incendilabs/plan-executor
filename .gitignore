@@ -44,5 +44,6 @@ build/
 
 **/.DS_Store
 html_summaries/*
+json_results/*
 
 .idea
