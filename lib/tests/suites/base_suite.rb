@@ -25,7 +25,7 @@ module Crucible
         if !operation_outcome.nil? && !operation_outcome.issue.nil?
           operation_outcome.issue.each {|issue| messages << "#{issue.severity}: #{issue.code}: #{issue.details.try(:text) || issue.diagnostics}" }
         end
-        messages
+        messages.join("\n")
       end
 
       # helpers to grab the versioned resources
