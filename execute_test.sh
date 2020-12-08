@@ -5,5 +5,6 @@ set -e
 FHIR_ENDPOINT_URL=$1
 FHIR_VERSION=$2
 TEST=$3
+TEST_OUTPUT=$4
 
-bundle exec rake crucible:execute[$FHIR_ENDPOINT_URL,$FHIR_VERSION,$3,,true] > logs/execute_$TEST.log 2>&1
+bundle exec rake crucible:execute[$FHIR_ENDPOINT_URL,$FHIR_VERSION,$TEST,,$TEST_OUTPUT] > logs/execute_$TEST.log 2>&1
