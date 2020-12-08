@@ -42,7 +42,6 @@ namespace :crucible do
       result = execute_all(args.url, client, args.output)
     }
     puts "Execute All completed in #{b.real} seconds."
-    output_results result
     print_summary result
     fail_on_error result
   end
@@ -97,7 +96,6 @@ namespace :crucible do
       result = execute_test(args.url, client, args.test, args.resource, args.output)
     }
     puts "Execute #{args.test} completed in #{b.real} seconds."
-    output_results result
     print_summary result
     fail_on_error result
   end
@@ -181,6 +179,7 @@ namespace :crucible do
     unless output.nil?
       generate_html_summary(url, results) if output == "true" || output_formats.include?("html") # old param syntax support
       output_json(url, results) if output_formats.include?("json")
+      output_results(results) if output_formats.include?("stdout")
     end
     results
   end
