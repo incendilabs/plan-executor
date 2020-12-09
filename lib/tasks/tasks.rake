@@ -42,8 +42,8 @@ namespace :crucible do
       result = execute_all(args.url, client, args.output)
     }
     puts "Execute All completed in #{b.real} seconds."
-    print_summary result
-    fail_on_error result
+    process_summary(result, args.url, args.output)
+    fail_on_error(result)
   end
 
   desc 'execute all test scripts'
@@ -96,8 +96,8 @@ namespace :crucible do
       result = execute_test(args.url, client, args.test, args.resource, args.output)
     }
     puts "Execute #{args.test} completed in #{b.real} seconds."
-    print_summary result
-    fail_on_error result
+    process_summary(result, args.url, args.output)
+    fail_on_error(result)
   end
 
   desc 'metadata'
@@ -108,14 +108,27 @@ namespace :crucible do
     puts "Metadata #{args.test} completed in #{b.real} seconds."
   end
 
-  def print_summary(result)
+  def process_summary(result, url, output = nil)
+    output_formats = []
+    output_formats = output.split('|').map{|str| str.downcase} if output
     totals = Hash.new(0)
     result.each do |(_, v)|
       v.map { |t| t["status"] }.each_with_object(totals) { |n, h| h[n] += 1 }
     end
+    output_summary(totals) if output_formats.include?("stdout")
+    save_json_summary(totals, url) if output_formats.include?("json")
+  end
+
+  def output_summary(totals)
     totals.each do |(status, count)|
       puts "#{status.upcase}: #{count}"
     end
+  end
+
+  def save_json_summary(totals, url)
+    FileUtils::mkdir_p("json_results")
+    output_file = output_file_name(url, "_summary", ".json")
+    File.write("json_results/#{output_file}", totals.to_json)
   end
 
   def fail_on_error(result)
