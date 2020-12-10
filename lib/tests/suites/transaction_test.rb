@@ -178,6 +178,7 @@ module Crucible
         @condition0.clinicalStatus = 'resolved'
         @condition0.verificationStatus = 'refuted'
         @condition0.abatementString = 'Abated at unknown date'
+        ResourceGenerator.fix_condition(@condition0)
 
         @client.begin_transaction
         @client.add_transaction_request('DELETE',"Observation/#{@obs0b.id}") if @obs0b && !@obs0b.id.nil? # delete first weight

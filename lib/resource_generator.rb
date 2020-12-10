@@ -1,5 +1,6 @@
 module Crucible
   module Tests
+
     class ResourceGenerator
 
       # Allow to embed this many extra levels if min != 0.
@@ -230,13 +231,7 @@ module Crucible
         end
         resource.code = minimal_codeableconcept(system,code, namespace)
         resource.verificationStatus = 'confirmed'
-
-        if resource.is_a?(FHIR::Condition)
-          # They changed it from `code` data type to `CodeableConcept` in `R4`
-          resource.verificationStatus = minimal_codeableconcept(
-              'http://terminology.hl7.org/CodeSystem/condition-ver-status',
-              resource.verificationStatus)
-        end
+        fix_condition(resource)
         tag_metadata(resource)
       end
 
@@ -313,6 +308,23 @@ module Crucible
           resource.meta = namespace.const_get(:Meta).new({ 'tag' => [{'system'=>'http://projectcrucible.org', 'code'=>'testdata'}]})
         else
           resource.meta.tag << @namespace.const_get(:Coding).new({'system'=>'http://projectcrucible.org', 'code'=>'testdata'})
+        end
+        resource
+      end
+
+      def self.fix_condition(resource)
+        if resource.is_a?(FHIR::Condition)
+          # They changed it from `code` data type to `CodeableConcept` in `R4`
+          if resource.clinicalStatus.kind_of? String
+            resource.clinicalStatus = minimal_codeableconcept(
+                'http://terminology.hl7.org/CodeSystem/condition-clinical',
+                resource.clinicalStatus)
+          end
+          if resource.verificationStatus.kind_of? String
+            resource.verificationStatus = minimal_codeableconcept(
+                'http://terminology.hl7.org/CodeSystem/condition-ver-status',
+                resource.verificationStatus)
+          end
         end
         resource
       end
@@ -462,6 +474,7 @@ module Crucible
               resource.onsetAge, resource.abatementAge = resource.abatementAge, resource.onsetAge
             end
           end
+          fix_condition(resource)
         when FHIR::CapabilityStatement
           resource.fhirVersion = '4.0.0'
           resource.format = ['xml','json']
