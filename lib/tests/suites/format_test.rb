@@ -291,6 +291,9 @@ module Crucible
           # There's no such a strict requirement in DSTU2 spec.
           # http://hl7.org/fhir/DSTU2/http.html#mime-type
         else
+
+          skip 'TODO: https://github.com/FirelyTeam/spark/issues/323'
+
           @client.use_format_param = false
           reply = @client.read_feed(get_resource(:Patient),'application/foobar')
 
@@ -312,6 +315,9 @@ module Crucible
           # There's no such a strict requirement in DSTU2 spec.
           # http://hl7.org/fhir/DSTU2/http.html#mime-type
         else
+
+          skip 'TODO: https://github.com/FirelyTeam/spark/issues/323'
+
           @client.use_format_param = true
           reply = @client.read_feed(get_resource(:Patient),'application/foobar')
           @client.use_format_param = false
