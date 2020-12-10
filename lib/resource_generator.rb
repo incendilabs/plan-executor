@@ -591,9 +591,7 @@ module Crucible
         when FHIR::ImagingStudy
           availability = ['ONLINE', 'OFFLINE', 'NEARLINE', 'UNAVAILABLE']
           resource.series.each do |series|
-            series.uid=random_oid
             series.instance.each do |instance|
-              instance.uid = random_oid
               instance.sopClass = minimal_coding('urn:ietf:rfc:3986', random_oid)
             end
           end
