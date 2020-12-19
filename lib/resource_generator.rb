@@ -41,9 +41,9 @@ module Crucible
           # For example, Condition.abatementQuantity should be of type Age, but there's no such type
           # definition in the DSTU2 models. So here, we're just skipping Quantity choice,
           # and selecting some other (probably primitive) type for the multi-choice FHIR property.
-          selected_multiples = multiples.map { |k| "#{k}#{resource.class::MULTIPLE_TYPES[k].sample.titleize.split.join}" } if namespace != 'FHIR::DSTU2'
-          selected_multiples = multiples.map { |k| "#{k}#{resource.class::MULTIPLE_TYPES[k].reject { |t| t == 'Quantity' }.sample.titleize.split.join}" } if namespace == 'FHIR::DSTU2'
-
+          ignore_multiple_types = ['Meta']
+          ignore_multiple_types += 'Quantity' if namespace == 'FHIR::DSTU2'
+          selected_multiples = multiples.map { |k| "#{k}#{resource.class::MULTIPLE_TYPES[k].reject { |t| ignore_multiple_types.include?(t) }.sample.titleize.split.join}" }
           unselected_multiples = all_multiples - selected_multiples
         end
         unselected_multiples.each do |key|
