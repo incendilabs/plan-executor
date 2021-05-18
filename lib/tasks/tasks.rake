@@ -114,7 +114,7 @@ namespace :crucible do
     totals = Hash.new(0)
     result.each do |(_, v)|
       v.map { |t| t["status"] }.each_with_object(totals) { |n, h| h[n] += 1 }
-    end
+    end unless result.nil?
     output_summary(totals) if output_formats.include?("stdout")
     save_json_summary(totals, url) if output_formats.include?("json")
   end
@@ -132,7 +132,7 @@ namespace :crucible do
   end
 
   def fail_on_error(result)
-    if result.values.any? { |v|
+    if !result.nil? && result.values.any? { |v|
       v.any? { |t|
         t['status'] == "error" ||
             t['status'] == "fail" ||
@@ -145,8 +145,8 @@ namespace :crucible do
 
   def resolve_fhir_version(version_string)
     fhir_version = :r4
-    fhir_version = :stu3 if version_string.downcase == 'stu3'
-    fhir_version = :dstu2 if version_string.downcase == 'dstu2'
+    fhir_version = :stu3 if version_string.to_s.downcase == 'stu3'
+    fhir_version = :dstu2 if version_string.to_s.downcase == 'dstu2'
     fhir_version
   end
 

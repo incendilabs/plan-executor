@@ -71,7 +71,7 @@ module Crucible
 
       # Use the built test suites to find a given test suite
       def find_test(key)
-        @suites[key.to_sym].new(@client, @client2) if @suites.keys.include?(key.to_sym)
+        @suites[key.to_s.to_sym].new(@client, @client2) if @suites.keys.include?(key.to_s.to_sym)
       end
 
       def build_suites_map
