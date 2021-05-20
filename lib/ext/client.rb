@@ -68,7 +68,7 @@ module FHIR
       @cached_capability_statement = nil
 
       formats.each do |frmt|
-        reply = get 'metadata', fhir_headers({accept: "#{frmt}"})
+        reply = get 'metadata', fhir_headers({ accept: "#{frmt}" })
         next unless reply.code == 200
         begin
           @cached_capability_statement = parse_reply(FHIR::DSTU2::Conformance, frmt, reply) if @fhir_version == :dstu2
@@ -84,6 +84,24 @@ module FHIR
       end
       @default_format = format if @default_format.nil?
       @cached_capability_statement
+    end
+
+    def fhir_patch(klass, id, patchset, options = {}, format = nil, additional_header = {})
+      format ||= @default_format
+      options = { resource: klass, id: id, format: format }.merge options
+      headers = {}
+      headers[:content_type] = "#{format}"
+      headers[:prefer] = @return_preference if @use_return_preference
+      headers.merge!(additional_header)
+      if format == FHIR::Formats::ResourceFormat::RESOURCE_XML
+        patchset = patchset.to_xml
+      elsif format == FHIR::Formats::ResourceFormat::RESOURCE_JSON
+        patchset = patchset.to_json
+      end
+      reply = patch resource_url(options), patchset, fhir_headers(headers)
+      reply.resource = parse_reply(klass, format, reply)
+      reply.resource_class = klass
+      reply
     end
 
   end
