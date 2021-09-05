@@ -242,8 +242,6 @@ module Crucible
           validates resource: nil, methods: ['transaction-system']
         }
 
-        skip 'TODO: https://github.com/FirelyTeam/spark/issues/305'
-
         assert @created_patient_record, 'Could not create patient in XFER0.'
 
         # height observation
@@ -469,8 +467,6 @@ module Crucible
           validates resource: 'Observation', methods: ['create','search']
           validates resource: nil, methods: ['batch-system']
         }
-
-        skip 'TODO: https://github.com/FirelyTeam/spark/issues/305'
 
         @batch_patient_2 = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Batch', version_namespace)
         reply = @client.create @batch_patient_2
