@@ -1,14 +1,15 @@
 ﻿name: Docker Image
 
 on:
-  push:
-    branches: [docker]
+  release:
+    types: [published]
 
 env:
   IMAGE_NAME: plan_executor
   
 jobs:
   main:
+    if: github.repository == 'incendilabs/plan-executor'
     runs-on: ubuntu-latest
     steps:
       -
