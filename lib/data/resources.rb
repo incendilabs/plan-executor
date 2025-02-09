@@ -251,7 +251,7 @@ module Crucible
 
       # FIXME: Determine a better way to share fixture data with Crucible
       def fixture_path
-        if File.exists?(FIXTURE_DIR)
+        if File.exist?(FIXTURE_DIR)
           FIXTURE_DIR
         else
           File.join(Rails.root, 'test', 'fixtures')
