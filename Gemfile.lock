@@ -1,38 +1,39 @@
 GIT
-  remote: https://github.com/incendilabs/fhir_client.git
-  revision: 0aeb59446250560dfa20976f02d3797a5fa22b3c
+  remote: https://github.com/fhir-crucible/fhir_dstu2_models.git
+  revision: 1c896ab810e3b4ff5c7597f9c61a1568087ed1bb
   specs:
-    fhir_client (4.0.4)
+    fhir_dstu2_models (1.2.0)
+      bcp47 (>= 0.3)
+      date_time_precision (>= 0.8)
+      mime-types (>= 3.0)
+      nokogiri (>= 1.11.4)
+
+GIT
+  remote: https://github.com/fhir-crucible/fhir_stu3_models.git
+  revision: 61fb069bc475f17f252d5fbe145548d5a63ec13f
+  specs:
+    fhir_stu3_models (3.2.0)
+      bcp47 (>= 0.3)
+      date_time_precision (>= 0.8)
+      mime-types (>= 3.0)
+      nokogiri (>= 1.11.4)
+
+GIT
+  remote: https://github.com/incendilabs/fhir_client.git
+  revision: 2a99bfa8971ff97cbb532202ee50f2863636ce56
+  branch: apply-upstream-changes
+  specs:
+    fhir_client (6.0.0)
       activesupport (>= 3)
       addressable (>= 2.3)
-      fhir_dstu2_models (>= 1.0.10)
-      fhir_models (>= 4.0.2)
-      fhir_stu3_models (>= 3.0.1)
+      fhir_dstu2_models (>= 1.1.1)
+      fhir_models (>= 5.0.0)
+      fhir_stu3_models (>= 3.1.1)
       nokogiri (>= 1.10.4)
       oauth2 (~> 1.1)
       rack (>= 1.5)
       rest-client (~> 2.0)
       tilt (>= 1.1)
-
-GIT
-  remote: https://github.com/incendilabs/fhir_dstu2_models.git
-  revision: 66c58438d323f634116dc937446d42d9b4356687
-  specs:
-    fhir_dstu2_models (1.0.10)
-      bcp47 (>= 0.3)
-      date_time_precision (>= 0.8)
-      mime-types (>= 3.0)
-      nokogiri (>= 1.10.4)
-
-GIT
-  remote: https://github.com/incendilabs/fhir_stu3_models.git
-  revision: 71db01196b6cafe2310498135849cae356fe6f44
-  specs:
-    fhir_stu3_models (3.0.1)
-      bcp47 (>= 0.3)
-      date_time_precision (>= 0.8)
-      mime-types (>= 3.0)
-      nokogiri (>= 1.10.4)
 
 PATH
   remote: .
@@ -76,11 +77,11 @@ GEM
       multipart-post (>= 1.2, < 3)
       ruby2_keywords
     ffi (1.13.1-x64-mingw32)
-    fhir_models (4.1.1)
+    fhir_models (5.0.0)
       bcp47 (>= 0.3)
       date_time_precision (>= 0.8)
       mime-types (>= 3.0)
-      nokogiri (>= 1.10.4)
+      nokogiri (>= 1.11.4)
     hashdiff (1.0.1)
     http-accept (1.7.0)
     http-cookie (1.0.3)
