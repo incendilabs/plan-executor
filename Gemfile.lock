@@ -121,7 +121,7 @@ GEM
       pry (~> 0.13)
     public_suffix (4.0.7)
     racc (1.8.1)
-    rack (2.2.19)
+    rack (2.2.20)
     rake (13.2.1)
     rest-client (2.1.0)
       http-accept (>= 1.7.0, < 2.0)
