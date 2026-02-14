@@ -118,8 +118,8 @@ jobs:
         run: |
           set +e
           docker compose run --rm --no-deps plan_executor \
-            ./execute_all.sh 'http://spark:8080/fhir' "$FHIR_VERSION" 'html|json|stdout'
-          suite_status=$?
+            ./execute_all.sh 'http://spark:8080/fhir' "$FHIR_VERSION" 'html|json|stdout' 2>&1 | tee logs/execute_all.log
+          suite_status=${PIPESTATUS[0]}
           printf '%s\n' "$suite_status" > suite-exit-status
           echo "suite_status=$suite_status" >> "$GITHUB_OUTPUT"
           exit 0
