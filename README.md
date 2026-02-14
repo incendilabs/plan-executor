@@ -102,6 +102,20 @@ $ git diff --exit-code -- lib/FHIR_structure_r5.json
 
 The downloaded archive is a source input and is not committed.
 
+## Logging Output
+
+The shell scripts output directly to stdout/stderr. To save logs to a file while also displaying output, use `tee`:
+
+```
+$ ./execute_all.sh http://localhost:8080/fhir r4 'html|json|stdout' 2>&1 | tee logs/execute_all.log
+```
+
+To redirect output to a file only (silent):
+
+```
+$ ./execute_all.sh http://localhost:8080/fhir r4 'html|json|stdout' > logs/execute_all.log 2>&1
+```
+
 ## Adding a New Test Suite
 
 1. Fork the repo
