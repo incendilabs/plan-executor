@@ -217,6 +217,10 @@ module Crucible
         assert_response_ok(reply)
         @patient1.id = (reply.resource.try(:id) || reply.id)
 
+        # Sleep to allow the server to index the new Patient before the conditional transaction executes.
+        # This only applies if the server uses an asynchronous indexing process.
+        sleep(0.5)
+
         @client.begin_transaction
         @client.add_transaction_request('POST',nil,@patient1,"identifier=#{@patient0.identifier.first.system}|#{@patient0.identifier.first.value}").fullUrl = "urn:uuid:#{SecureRandom.uuid}"
         reply = @client.end_transaction
