@@ -27,6 +27,10 @@ module Crucible
         result = @client.create(@patient)
         @patient_id = result.id
 
+        # Sleep to allow the server to index the new patient before we attempt to read/search for it.
+        # This only applies if the server uses an asynchronous indexing process.
+        sleep(0.02)
+
         # read all the patients
         @read_entire_feed=true
         @client.use_format_param = true
