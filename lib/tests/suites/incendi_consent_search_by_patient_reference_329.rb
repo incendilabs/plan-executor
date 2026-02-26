@@ -32,7 +32,7 @@ module Crucible
 
         # Sleep to allow the server to index the new Consent before we attempt to search for it.
         # This only applies if the server uses an asynchronous indexing process.
-        sleep(0.02)
+        sleep(0.2)
 
       end
 
