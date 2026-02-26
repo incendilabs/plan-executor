@@ -68,6 +68,7 @@ module Crucible
         @category = {id: 'testscript', title: 'TestScript'}
         @id_map = {}
         @response_map = {}
+        @request_map = {}
         @autocreate = []
         @autodelete = []
         @testscript = testscript
@@ -660,7 +661,7 @@ module Crucible
               unless variable_source_response.nil?
                 resource = variable_source_response.try(:resource) || version_namespace.from_contents(variable_source_response.body)
               else
-                resource = @fixtures[var.sourceId]
+                resource = @request_map[var.sourceId] || @fixtures[var.sourceId]
               end
 
               variable_value = extract_value_by_path(resource, var.path)
@@ -705,6 +706,10 @@ module Crucible
           log "Overwriting response #{operation.responseId}..." if @response_map.keys.include?(operation.responseId)
           log "Storing response #{operation.responseId}..."
           @response_map[operation.responseId] = @last_response
+        end
+        if !operation.requestId.blank? && !operation.sourceId.blank?
+          log "Storing request #{operation.requestId}..."
+          @request_map[operation.requestId] = @fixtures[operation.sourceId]
         end
       end
 
