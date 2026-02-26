@@ -170,6 +170,9 @@ module Crucible
         }
 
         result = TestResult.new('X014',"Conditional Create #{resource_class.name.demodulize}", nil, nil, nil)
+        # Sleep to allow the server to index previously created resources before we search.
+        # This only applies if the server uses an asynchronous indexing process.
+        sleep(0.2)
         # this should match all resources
         ifNoneExist = { '_lastUpdated' => 'gt1900-01-01' }
         ignore_client_exception { @conditional_create_resource_c = ResourceGenerator.generate(@resource_class,5).conditional_create(ifNoneExist) }
