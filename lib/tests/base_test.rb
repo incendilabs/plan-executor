@@ -50,9 +50,9 @@ module Crucible
       end
 
       def version_namespace
-        if @client.fhir_version.to_s.upcase == 'DSTU2'
+        if @client&.fhir_version.to_s.upcase == 'DSTU2'
           "FHIR::DSTU2".constantize
-        elsif @client.fhir_version.to_s.upcase == 'STU3'
+        elsif @client&.fhir_version.to_s.upcase == 'STU3'
           "FHIR::STU3".constantize
         else
           "FHIR".constantize
