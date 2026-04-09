@@ -121,6 +121,8 @@ module Crucible
                   c.system = 'https://www.usps.com/'
                   c.code = ['CA','TX','NY','MA','DC'].sample
                 end
+              elsif type == 'CodeableConcept' && meta['binding'] && meta['binding']['strength'] == 'required' && !meta['valid_codes'] && meta['min'] == 0
+                gen = nil # Cannot generate valid code for external required binding (e.g. LOINC/SNOMED); field is optional so safe to skip
               elsif type == 'Coding' && meta['valid_codes'] && meta['binding']
                 gen.system = meta['valid_codes'].keys.sample
                 gen.code = meta['valid_codes'][gen.system].sample
