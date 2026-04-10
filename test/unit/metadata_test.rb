@@ -36,7 +36,7 @@ class MetadataTest < Test::Unit::TestCase
 
     testscript_engine = Crucible::Tests::TestScriptEngine.new(nil)
 
-    keyed_test = testscript_engine.find_test('TS-testscript-example')
+    keyed_test = testscript_engine.find_test(tests.keys.first)
     assert !keyed_test.nil?, "Failed to find testscript by key"
   end
 
