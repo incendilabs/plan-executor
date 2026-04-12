@@ -440,7 +440,7 @@ module Crucible
         when FHIR::CommunicationRequest
           resource.payload = nil
         when FHIR::Composition
-          resource.attester.each {|a| a.mode = ['professional']}
+          resource.attester.each {|a| a.mode = 'professional'}
           resource.section.each do |section|
             section.emptyReason = nil
             section.section.each do |sub|
