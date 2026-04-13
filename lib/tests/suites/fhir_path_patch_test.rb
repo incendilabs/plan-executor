@@ -126,19 +126,20 @@ module Crucible
 
       def patchset_resource(op, path, name, value)
         parameters = get_resource(:Parameters).new
-        parameters.parameter = new_parameter("operation")
-        parameters.parameter.part = [
+        param = new_parameter("operation")
+        param.part = [
           new_parameter("type"),
           new_parameter("path"),
           new_parameter("value")
         ]
-        parameters.parameter.part[0].valueCode = op
-        parameters.parameter.part[1].valueString = path
-        parameters.parameter.part[2].valueString = value
+        param.part[0].valueCode = op
+        param.part[1].valueString = path
+        param.part[2].valueString = value
         if !name.nil?
-          parameters.parameter.part += new_parameter("name")
-          parameters.parameter.part[3].valueString = name
+          param.part += [new_parameter("name")]
+          param.part[3].valueString = name
         end
+        parameters.parameter = [param]
         parameters
       end
 
