@@ -178,7 +178,7 @@ module Crucible
           observation = @resources.load_fixture(obs, :xml)
           observation.specimen = @records[specimen_name].to_reference
           observation.subject = @records[:patient].to_reference
-          observation.performer = @records[:performer].to_reference
+          observation.performer = [@records[:performer].to_reference]
           observation_name = "#{dr_name}_observation_#{index}".to_sym
           create_object(observation, observation_name)
           diag_report.result << @records[observation_name].to_reference
