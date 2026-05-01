@@ -63,7 +63,7 @@ module Crucible
 
         observation.subject = @records[:patient].to_reference
         observation.specimen = @records[:specimen_register_create].to_reference
-        observation.performer = @records[:practitioner].to_reference
+        observation.performer = [@records[:practitioner].to_reference]
         create_object(observation, :observation_register_create)
       end
 
@@ -162,7 +162,7 @@ module Crucible
 
 
         dw_obs = @resources.observation_datawarehouse
-        dw_obs.performer = @records[:practitioner].to_reference
+        dw_obs.performer = [@records[:practitioner].to_reference]
         dw_obs.subject = @records[:family_patient].to_reference
         dw_obs.specimen = @records[:family_specimen].to_reference
         create_object(dw_obs, :dw_obs)
