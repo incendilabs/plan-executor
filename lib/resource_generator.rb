@@ -772,10 +772,7 @@ module Crucible
           #   i.maxLength = nil if !['boolean', 'decimal', 'integer', 'string', 'text', 'url'].include?(i.type)
           # end
         when FHIR::QuestionnaireResponse
-          resource.item.each do |i|
-            i.item = nil
-            i.answer.each {|q|q.valueBoolean = true if !q.value }
-          end
+          fix_questionnaire_response_items(resource.item)
         when FHIR::Range
           # validate that the low/high values in the range are correct (e.g. the low value is not higher than the high value)
           if resource.low && resource.high
@@ -1559,10 +1556,7 @@ module Crucible
             i.maxLength = nil if !['boolean', 'decimal', 'integer', 'string', 'text', 'url'].include?(i.type)
           end
         when FHIR::STU3::QuestionnaireResponse
-          resource.item.each do |i|
-            i.item = nil
-            i.answer.each {|q|q.valueBoolean = true if !q.value }
-          end
+          fix_questionnaire_response_items(resource.item)
         when FHIR::STU3::Range
           # validate that the low/high values in the range are correct (e.g. the low value is not higher than the high value)
           if resource.low && resource.high
@@ -2264,6 +2258,36 @@ module Crucible
           end
         else
           # default
+        end
+      end
+
+      # Recursively fixes a QuestionnaireResponse item tree so it can be accepted
+      # by a strict FHIR parser.
+      #
+      # The generated tree can be arbitrarily deep via two nesting axes:
+      #   item.answer[].item[]   — items nested inside an answer
+      #   item.item[]            — direct sub-item groups on an item
+      #
+      # Two problems are corrected at every level:
+      #   1. Answers with no value are given `valueBoolean = true`.  A strict parser
+      #      rejects answer objects that are completely empty (`{}`).
+      #   2. Direct sub-item groups (`item.item`) are removed.  They are often
+      #      generated empty or with invalid content that would fail validation.
+      #
+      # Ordering matters: `answer.item` is recursed BEFORE `item.item` is cleared,
+      # because answer-nested items may themselves contain answers that need fixing.
+      # Clearing `item.item` first would not affect `answer.item`, but fixing
+      # `answer.item` last would process items that are immediately discarded —
+      # so the current order keeps the logic clear: fix answers deeply first, then drop
+      # the direct sub-groups.
+      def self.fix_questionnaire_response_items(items)
+        return if items.nil? || items.empty?
+        items.each do |item|
+          item.answer.each do |answer|
+            answer.valueBoolean = true unless answer.value
+            fix_questionnaire_response_items(answer.item) unless answer.item.nil?
+          end
+          item.item = nil
         end
       end
 
