@@ -127,11 +127,11 @@ module Crucible
         create_object(specimen, :family_specimen)
 
         diag_report = @resources.diagnostic_familyhistory
-        diag_report.result = @records[:family_observation].to_reference
+        diag_report.result = [@records[:family_observation].to_reference]
         diag_report.subject = @records[:family_patient].to_reference
         diag_report.performer = [ FHIR::STU3::DiagnosticReport::Performer.new ]
         diag_report.performer.first.actor = @records[:practitioner].to_reference
-        diag_report.specimen = @records[:family_specimen].to_reference
+        diag_report.specimen = [@records[:family_specimen].to_reference]
         create_object(diag_report, :family_report)
 
         reply = @client.read FHIR::STU3::FamilyMemberHistory, @records[:family_member_history].id
