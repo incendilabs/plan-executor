@@ -59,7 +59,7 @@ module Crucible
             requires resource: 'Communication', methods: ['create']
           }
           comm = FHIR::STU3::Communication.new()
-          comm.subject = [@records[:patient].to_reference]
+          comm.subject = @records[:patient].to_reference
           comm.recipient = [@records[:practitioner].to_reference]
           comm.status = 'preparation'
 
@@ -69,9 +69,9 @@ module Crucible
           comm_att.title = @attachments[att_type]
 
           payload = FHIR::STU3::Communication::Payload.new
-          payload.contentAttachment = [comm_att]
+          payload.contentAttachment = comm_att
 
-          comm.payload = payload
+          comm.payload = [payload]
           create_object(comm, "comm_#{att_type}")
         end
 
@@ -103,8 +103,8 @@ module Crucible
           assert comm_req, 'No CommunicationRequest returned from server'
 
           comm = FHIR::STU3::Communication.new()
-          comm.subject = [comm_req.subject]
-          comm.recipient = [comm_req.sender]
+          comm.subject = comm_req.subject
+          comm.recipient = [comm_req.sender].compact
           comm.basedOn = [comm_req.to_reference]
           comm.status = 'preparation'
 
@@ -114,9 +114,9 @@ module Crucible
           comm_att.title = @attachments[att_type]
 
           payload = FHIR::STU3::Communication::Payload.new
-          payload.contentAttachment = [comm_att]
+          payload.contentAttachment = comm_att
 
-          comm.payload = payload
+          comm.payload = [payload]
           create_object(comm, "comm_#{att_type}")
         end
       end
