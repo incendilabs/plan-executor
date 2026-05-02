@@ -249,7 +249,7 @@ module Crucible
         hn = namespace.const_get(:HumanName).new
         hn.use = 'official'
         hn.family = 'Crucible'
-        hn.given = [ name ]
+        hn.given = [ name ] if name.present?
         hn.text = "#{hn.given[0]} #{hn.family}"
         hn
       end
