@@ -37,7 +37,7 @@ module Crucible
         # Create some cancer-category care plans
         @num_cancer_care_plans = rand(1..3)
         @cancer_care_plan_category = FHIR::STU3::CodeableConcept.new(text: "Cancer care plan")
-        @cancer_care_plan_category.coding = FHIR::STU3::Coding.new(code: "395082007", system: "http://snomed.info/sct", display: "Cancer care plan")
+        @cancer_care_plan_category.coding = [FHIR::STU3::Coding.new(code: "395082007", system: "http://snomed.info/sct", display: "Cancer care plan")]
         @num_cancer_care_plans.times do |t|
           care_plan = @resources.generate(FHIR::STU3::CarePlan, 3)
           care_plan.subject = patient.to_reference
@@ -129,7 +129,7 @@ module Crucible
 
         reply.resource.entry.each do |entry|
           assert entry.resource.subject.equals?(@records["patient"].to_reference), "care plan #{entry.resource.id} subject ID doesn't match given subject ID #{@records["patient"].to_reference}"
-          assert entry.resource.category.first.coding.first.equals?(@cancer_care_plan_category.coding), "care plan category code doesn't match cancer category code #{@cancer_care_plan_category} (#{entry.resource.category.first.coding.first.mismatch(@cancer_care_plan_category.coding)})"
+          assert entry.resource.category.first.coding.first.equals?(@cancer_care_plan_category.coding.first), "care plan category code doesn't match cancer category code #{@cancer_care_plan_category} (#{entry.resource.category.first.coding.first.mismatch(@cancer_care_plan_category.coding.first)})"
         end
       end
 
