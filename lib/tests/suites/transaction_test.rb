@@ -42,6 +42,8 @@ module Crucible
         @client.destroy(get_resource(:Observation), @batch_obs_2.id) if @batch_obs_2 && !@batch_obs_2.id.nil?
         @client.destroy(get_resource(:Observation), @batch_obs_3.id) if @batch_obs_3 && !@batch_obs_3.id.nil?
         @client.destroy(get_resource(:Patient), @batch_patient_2.id) if @batch_patient_2 && !@batch_patient_2.id.nil?
+        @client.destroy(get_resource(:Patient), @ifmatch_patient.id) if @ifmatch_patient && !@ifmatch_patient.id.nil?
+        @client.destroy(get_resource(:Patient), @ifmatch_patient_2.id) if @ifmatch_patient_2 && !@ifmatch_patient_2.id.nil?
       end
 
       # Create a Patient Record as a transaction
@@ -537,6 +539,68 @@ module Crucible
         warning{ assert_response_ok(reply) }
         assert_bundle_response(reply)
         assert_bundle_transactions_okay(reply)
+      end
+
+      # Transaction PUT with matching IfMatch should succeed
+      test 'XFER20','Transaction PUT with matching IfMatch should succeed' do
+        metadata {
+          links "#{REST_SPEC_LINK}#transaction"
+          links "#{BASE_SPEC_LINK}/patient.html"
+          requires resource: 'Patient', methods: ['create','update']
+          requires resource: nil, methods: ['transaction-system']
+          validates resource: 'Patient', methods: ['update']
+          validates resource: nil, methods: ['transaction-system']
+        }
+
+        # Create a Patient and capture the ETag from the response
+        @ifmatch_patient = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'IfMatch', version_namespace)
+        reply = @client.create @ifmatch_patient
+        assert_response_ok(reply)
+        @ifmatch_patient.id = (reply.resource.try(:id) || reply.id)
+
+        etag = reply.response[:headers]['etag']
+        assert etag, 'Server did not return an ETag header on create'
+
+        # Modify the patient
+        @ifmatch_patient.name.first.given = ['UpdatedGiven']
+
+        # Build a transaction with PUT + matching IfMatch
+        @client.begin_transaction
+        entry = @client.add_transaction_request('PUT', "Patient/#{@ifmatch_patient.id}", @ifmatch_patient)
+        entry.request.ifMatch = etag
+        reply = @client.end_transaction
+
+        assert( ((200..299).include?(reply.code)), "Transaction with matching IfMatch should succeed, got: #{reply.code}" )
+        assert_bundle_response(reply)
+      end
+
+      # Transaction PUT with non-matching IfMatch should fail
+      test 'XFER21','Transaction PUT with non-matching IfMatch should fail' do
+        metadata {
+          links "#{REST_SPEC_LINK}#transaction"
+          links "#{BASE_SPEC_LINK}/patient.html"
+          requires resource: 'Patient', methods: ['create','update']
+          requires resource: nil, methods: ['transaction-system']
+          validates resource: 'Patient', methods: ['update']
+          validates resource: nil, methods: ['transaction-system']
+        }
+
+        # Create a Patient
+        @ifmatch_patient_2 = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'IfMatch2', version_namespace)
+        reply = @client.create @ifmatch_patient_2
+        assert_response_ok(reply)
+        @ifmatch_patient_2.id = (reply.resource.try(:id) || reply.id)
+
+        # Modify the patient
+        @ifmatch_patient_2.name.first.given = ['UpdatedGiven']
+
+        # Build a transaction with PUT + non-matching IfMatch
+        @client.begin_transaction
+        entry = @client.add_transaction_request('PUT', "Patient/#{@ifmatch_patient_2.id}", @ifmatch_patient_2)
+        entry.request.ifMatch = 'W/"non-matching-version"'
+        reply = @client.end_transaction
+
+        assert( ((400..499).include?(reply.code)), "Transaction with non-matching IfMatch should fail with 4xx, got: #{reply.code}" )
       end
     end
   end
