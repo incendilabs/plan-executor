@@ -735,8 +735,6 @@ module Crucible
           validates resource: "Patient", methods: ["search"]
         }
 
-        skip 'TODO: https://github.com/FirelyTeam/spark/issues/309'
-
         # a malformed parameters are non-existing parameters, and they should be ignored
         options = {
           :search => {
