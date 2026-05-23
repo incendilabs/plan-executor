@@ -55,6 +55,33 @@ module Crucible
         }
       end
 
+      # '...' consists solely of chain separators, causing Criterium.Parse to return nil
+      # (the chain path is empty after splitting on '.'). This exercises the malformed
+      # parameter code path added in issue #1267.
+      # Returns a new hash each call because the FHIR client mutates the options hash.
+      def malformed_param_options
+        {
+          search: {
+            compartment: nil,
+            parameters: {
+              '...' => 'foobar'
+            }
+          }
+        }
+      end
+
+      def malformed_param_options_post
+        {
+          search: {
+            flag: true,
+            compartment: nil,
+            parameters: {
+              '...' => 'foobar'
+            }
+          }
+        }
+      end
+
       test 'I1160A', 'Unknown search parameter: server returns HTTP 200 (lenient behaviour)' do
         metadata {
           links "#{BASE_SPEC_LINK}/search.html#errors"
@@ -168,6 +195,138 @@ module Crucible
         }
 
         reply = @client.search(version_namespace.const_get(:QuestionnaireResponse), unknown_param_options_post)
+        assert_response_ok(reply)
+        assert_bundle_response(reply)
+
+        outcome_entry = reply.resource.entry.find do |e|
+          e.resource.is_a?(version_namespace.const_get(:OperationOutcome)) &&
+            e.search&.mode == 'outcome'
+        end
+
+        assert(outcome_entry, 'No OperationOutcome entry with search.mode=outcome found in the Bundle', reply.body)
+
+        issue = outcome_entry.resource.issue.first
+        assert(issue, 'OperationOutcome has no issues', reply.body)
+        assert(
+          issue.severity == 'warning',
+          "Expected OperationOutcome issue severity to be 'warning' but was '#{issue.severity}'",
+          reply.body
+        )
+      end
+
+      test 'I1267A', 'Malformed search parameter: server returns HTTP 200 (lenient behaviour)' do
+        metadata {
+          links "#{BASE_SPEC_LINK}/search.html#errors"
+          links "#{REST_SPEC_LINK}#search"
+          links 'https://github.com/FirelyTeam/spark/issues/1267'
+          validates resource: 'QuestionnaireResponse', methods: ['search']
+        }
+
+        reply = @client.search(version_namespace.const_get(:QuestionnaireResponse), malformed_param_options)
+
+        assert_response_ok(reply)
+        assert_bundle_response(reply)
+      end
+
+      test 'I1267B', 'Malformed search parameter: Bundle includes an OperationOutcome entry with search.mode=outcome' do
+        metadata {
+          links "#{BASE_SPEC_LINK}/search.html#errors"
+          links "#{REST_SPEC_LINK}#search"
+          links 'https://github.com/FirelyTeam/spark/issues/1267'
+          validates resource: 'QuestionnaireResponse', methods: ['search']
+        }
+
+        reply = @client.search(version_namespace.const_get(:QuestionnaireResponse), malformed_param_options)
+        assert_response_ok(reply)
+        assert_bundle_response(reply)
+
+        outcome_entries = reply.resource.entry.select do |e|
+          e.resource.is_a?(version_namespace.const_get(:OperationOutcome)) &&
+            e.search&.mode == 'outcome'
+        end
+
+        assert(
+          outcome_entries.any?,
+          'Expected the searchset Bundle to contain at least one OperationOutcome entry with search.mode=outcome for the malformed parameter "..."',
+          reply.body
+        )
+      end
+
+      test 'I1267C', 'Malformed search parameter: OperationOutcome issue severity is warning' do
+        metadata {
+          links "#{BASE_SPEC_LINK}/search.html#errors"
+          links "#{REST_SPEC_LINK}#search"
+          links 'https://github.com/FirelyTeam/spark/issues/1267'
+          validates resource: 'QuestionnaireResponse', methods: ['search']
+        }
+
+        reply = @client.search(version_namespace.const_get(:QuestionnaireResponse), malformed_param_options)
+        assert_response_ok(reply)
+        assert_bundle_response(reply)
+
+        outcome_entry = reply.resource.entry.find do |e|
+          e.resource.is_a?(version_namespace.const_get(:OperationOutcome)) &&
+            e.search&.mode == 'outcome'
+        end
+
+        assert(outcome_entry, 'No OperationOutcome entry with search.mode=outcome found in the Bundle', reply.body)
+
+        issue = outcome_entry.resource.issue.first
+        assert(issue, 'OperationOutcome has no issues', reply.body)
+        assert(
+          issue.severity == 'warning',
+          "Expected OperationOutcome issue severity to be 'warning' but was '#{issue.severity}'",
+          reply.body
+        )
+      end
+
+      test 'I1267D', 'Malformed search parameter via POST _search: server returns HTTP 200 (lenient behaviour)' do
+        metadata {
+          links "#{BASE_SPEC_LINK}/search.html#errors"
+          links "#{REST_SPEC_LINK}#search"
+          links 'https://github.com/FirelyTeam/spark/issues/1267'
+          validates resource: 'QuestionnaireResponse', methods: ['search']
+        }
+
+        reply = @client.search(version_namespace.const_get(:QuestionnaireResponse), malformed_param_options_post)
+
+        assert_response_ok(reply)
+        assert_bundle_response(reply)
+      end
+
+      test 'I1267E', 'Malformed search parameter via POST _search: Bundle includes an OperationOutcome entry with search.mode=outcome' do
+        metadata {
+          links "#{BASE_SPEC_LINK}/search.html#errors"
+          links "#{REST_SPEC_LINK}#search"
+          links 'https://github.com/FirelyTeam/spark/issues/1267'
+          validates resource: 'QuestionnaireResponse', methods: ['search']
+        }
+
+        reply = @client.search(version_namespace.const_get(:QuestionnaireResponse), malformed_param_options_post)
+        assert_response_ok(reply)
+        assert_bundle_response(reply)
+
+        outcome_entries = reply.resource.entry.select do |e|
+          e.resource.is_a?(version_namespace.const_get(:OperationOutcome)) &&
+            e.search&.mode == 'outcome'
+        end
+
+        assert(
+          outcome_entries.any?,
+          'Expected the searchset Bundle to contain at least one OperationOutcome entry with search.mode=outcome for the malformed parameter "..."',
+          reply.body
+        )
+      end
+
+      test 'I1267F', 'Malformed search parameter via POST _search: OperationOutcome issue severity is warning' do
+        metadata {
+          links "#{BASE_SPEC_LINK}/search.html#errors"
+          links "#{REST_SPEC_LINK}#search"
+          links 'https://github.com/FirelyTeam/spark/issues/1267'
+          validates resource: 'QuestionnaireResponse', methods: ['search']
+        }
+
+        reply = @client.search(version_namespace.const_get(:QuestionnaireResponse), malformed_param_options_post)
         assert_response_ok(reply)
         assert_bundle_response(reply)
 
