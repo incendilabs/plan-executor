@@ -602,8 +602,6 @@ module Crucible
           validates resource: "Observation", methods: ["search"]
         }
 
-        skip 'TODO: https://github.com/FirelyTeam/spark/issues/308'
-
         assert (@obs_a && @obs_b && @obs_c && @obs_d), 'Could not create Observations in setup.'
 
         options = {
@@ -640,8 +638,6 @@ module Crucible
           links "#{BASE_SPEC_LINK}/observation.html#search"
           validates resource: "Observation", methods: ["search"]
         }
-
-        skip 'TODO: https://github.com/FirelyTeam/spark/issues/308'
 
         assert (@obs_a && @obs_e && @obs_f), 'Could not create Observations in setup.'
 
