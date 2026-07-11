@@ -86,7 +86,7 @@ module Crucible
       end
 
       test 'I_ELEMENTS_002', 'Read with _elements returns only requested Patient elements' do
-        skip 'https://github.com/FirelyTeam/spark/issues/1336'
+        skip 'TODO: https://github.com/FirelyTeam/spark/issues/1336'
 
         metadata {
           links "#{BASE_SPEC_LINK}/http.html#read"
