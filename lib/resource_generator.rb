@@ -14,9 +14,7 @@ module Crucible
       #
       def self.generate(klass,embedded=0)
         resource = klass.new
-        namespace = 'FHIR'
-        namespace = 'FHIR::DSTU2' if klass.name.starts_with? 'FHIR::DSTU2'
-        namespace = 'FHIR::STU3' if klass.name.starts_with? 'FHIR::STU3'
+        namespace = Crucible::FHIRVersion.namespace_name(Crucible::FHIRVersion.for_class(klass))
         Time.zone = 'UTC'
         set_fields!(resource, namespace, embedded)
         resource.id=nil if resource.respond_to?(:id=)

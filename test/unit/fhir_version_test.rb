@@ -25,6 +25,13 @@ class FHIRVersionTest < Test::Unit::TestCase
     assert_same FHIR::R4B, Crucible::FHIRVersion.namespace(:r4b)
   end
 
+  def test_model_classes_resolve_to_their_owning_version
+    assert_equal :dstu2, Crucible::FHIRVersion.for_class(FHIR::DSTU2::Patient)
+    assert_equal :stu3, Crucible::FHIRVersion.for_class(FHIR::STU3::Patient)
+    assert_equal :r4, Crucible::FHIRVersion.for_class(FHIR::Patient)
+    assert_equal :r4b, Crucible::FHIRVersion.for_class(FHIR::R4B::Patient)
+  end
+
   def test_unknown_version_fails_instead_of_falling_back_to_r4
     error = assert_raise(Crucible::FHIRVersion::UnsupportedVersionError) do
       Crucible::FHIRVersion.resolve('r5')

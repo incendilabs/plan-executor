@@ -12,8 +12,8 @@ module Crucible
         # body should be a String
         outcome = nil
         begin
-          outcome = FHIR.from_contents(body)
-          outcome = nil if outcome.class!=FHIR::OperationOutcome
+          outcome = version_namespace.from_contents(body)
+          outcome = nil unless outcome.is_a?(version_namespace.const_get(:OperationOutcome))
         rescue
           outcome = nil
         end
@@ -48,45 +48,23 @@ module Crucible
       end
 
       def resource_from_contents(body)
-        if @client.fhir_version.to_s.upcase == 'DSTU2'
-          FHIR::DSTU2.from_contents(body)
-        else
-          FHIR.from_contents(body)
-        end
+        version_namespace.from_contents(body)
       end
 
       def self.get_resource(fhir_version, resource)
-        if fhir_version.to_s.upcase == 'DSTU2'
-          "FHIR::DSTU2::#{resource}".constantize
-        elsif fhir_version.to_s.upcase == 'STU3'
-          "FHIR::STU3::#{resource}".constantize
-        else
-          "FHIR::#{resource}".constantize
-        end
-
+        Crucible::FHIRVersion.namespace(fhir_version).const_get(resource)
       end
 
 
       def self.valid_resource?(fhir_version, resource)
-        if fhir_version.to_s.upcase == 'DSTU2'
-          FHIR::DSTU2::RESOURCES.include?(resource)
-        elsif fhir_version.to_s.upcase == 'STU3'
-          FHIR::STU3::RESOURCES.include?(resource)
-        else
-          FHIR::RESOURCES.include?(resource)
-        end
+        Crucible::FHIRVersion.namespace(fhir_version).const_get(:RESOURCES).include?(resource.to_s)
       end
 
       def self.fhir_resources(fhir_version=nil)
-
-        resources = FHIR::RESOURCES
-        namespace = 'FHIR'
-        if !fhir_version.nil? && FHIR.constants.include?(fhir_version.upcase)
-          resources = FHIR.const_get(fhir_version.upcase)::RESOURCES
-          namespace = "FHIR::#{fhir_version.to_s.upcase}"
-        end
-
-        resources.select {|r| !EXCLUDED_RESOURCES.include?(r)}.map {|r| "#{namespace}::#{r}".constantize}
+        namespace = Crucible::FHIRVersion.namespace(fhir_version)
+        namespace.const_get(:RESOURCES)
+          .reject { |resource| EXCLUDED_RESOURCES.include?(resource) }
+          .map { |resource| namespace.const_get(resource) }
       end
 
       def requires(hash)
@@ -163,12 +141,7 @@ module Crucible
       def resource_category(resource)
         unless @resource_category
           @categories_by_resource = {}
-          fhir_version = :r4
-          if resource.name.start_with? 'FHIR::DSTU2'
-            fhir_version = :dstu2
-          elsif resource.name.start_with? 'FHIR::STU3'
-            fhir_version = :stu3
-          end
+          fhir_version = Crucible::FHIRVersion.for_class(resource)
           fhir_structure = Crucible::FHIRStructure.get(fhir_version)
           categories = fhir_structure['children'].select {|n| n['name'] == 'RESOURCES'}.first['children']
           pull_children = lambda {|n, chain| n['children'].nil? ? n['name'] : n['children'].map {|child| chain.call(child, chain)}}
