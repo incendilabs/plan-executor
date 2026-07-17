@@ -241,7 +241,8 @@ module Crucible
       def load_fixture(path, extension)
 
         full_path = File.join(fixture_path, "#{path}.#{extension.to_s}")
-        full_path = File.join(fixture_path, "#{path}.#{@fhir_version.to_s}.#{extension}") if File.exist?(File.join("#{path}.#{@fhir_version.to_s}.#{extension}"))
+        versioned_path = File.join(fixture_path, "#{path}.#{@fhir_version}.#{extension}")
+        full_path = versioned_path if File.exist?(versioned_path)
         tag_metadata(@namespace.from_contents(File.read(full_path)))
       end
 
