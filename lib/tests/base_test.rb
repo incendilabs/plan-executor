@@ -38,6 +38,7 @@ module Crucible
         FHIR::Resource.new.client = client
         FHIR::DSTU2::Resource.new.client = client
         FHIR::STU3::Resource.new.client = client
+        FHIR::R4B::Resource.new.client = client
         @client2 = client2
         @client.monitor_requests if @client
         @client2.monitor_requests if @client2
@@ -50,13 +51,7 @@ module Crucible
       end
 
       def version_namespace
-        if @client&.fhir_version.to_s.upcase == 'DSTU2'
-          "FHIR::DSTU2".constantize
-        elsif @client&.fhir_version.to_s.upcase == 'STU3'
-          "FHIR::STU3".constantize
-        else
-          "FHIR".constantize
-        end
+        Crucible::FHIRVersion.namespace(@client&.fhir_version)
       end
 
       def multiserver

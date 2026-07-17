@@ -23,9 +23,23 @@ module Crucible
     end
 
     def self.namespace(value = nil)
-      NAMESPACES.fetch(resolve(value)).split('::').inject(Object) do |parent, name|
+      namespace_name(value).split('::').inject(Object) do |parent, name|
         parent.const_get(name)
       end
+    end
+
+    def self.namespace_name(value = nil)
+      NAMESPACES.fetch(resolve(value))
+    end
+
+    def self.for_class(value)
+      class_name = value.is_a?(Module) ? value.name : value.class.name
+      version = NAMESPACES.sort_by { |_key, name| -name.length }.find do |_key, name|
+        class_name == name || class_name.start_with?("#{name}::")
+      end
+      return version.first if version
+
+      raise UnsupportedVersionError, "Unable to determine FHIR version for #{class_name}"
     end
   end
 end

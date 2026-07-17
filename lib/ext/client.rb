@@ -9,12 +9,6 @@ module FHIR
       @requests << reply
     end
 
-    def use_fhir_version(fhir_version)
-      self.use_r4
-      self.use_stu3 if fhir_version == :stu3
-      self.use_dstu2 if fhir_version == :dstu2
-    end
-
     def monitor_requests
       return if @decorated
       @decorated = true
@@ -53,37 +47,7 @@ module FHIR
     end
 
     def capability_statement_new(format = @default_format)
-      if !@cached_capability_statement.nil? && format == @default_format
-        return @cached_capability_statement
-      end
-
-      formats = [FHIR::Formats::ResourceFormat::RESOURCE_XML,
-                 FHIR::Formats::ResourceFormat::RESOURCE_JSON,
-                 FHIR::Formats::ResourceFormat::RESOURCE_XML_DSTU2,
-                 FHIR::Formats::ResourceFormat::RESOURCE_JSON_DSTU2,
-                 'application/xml',
-                 'application/json']
-      formats.insert(0, format)
-
-      @cached_capability_statement = nil
-
-      formats.each do |frmt|
-        reply = get 'metadata', fhir_headers({ accept: "#{frmt}" })
-        next unless reply.code == 200
-        begin
-          @cached_capability_statement = parse_reply(FHIR::DSTU2::Conformance, frmt, reply) if @fhir_version == :dstu2
-          @cached_capability_statement = parse_reply(FHIR::STU3::CapabilityStatement, frmt, reply) if @fhir_version == :stu3
-          @cached_capability_statement = parse_reply(FHIR::CapabilityStatement, frmt, reply) if @fhir_version != :dstu2 && @fhir_version != :stu3
-        rescue
-          @cached_capability_statement = nil
-        end
-        if @cached_capability_statement
-          @default_format = frmt
-          break
-        end
-      end
-      @default_format = format if @default_format.nil?
-      @cached_capability_statement
+      capability_statement(format)
     end
 
     def fhir_patch(klass, id, patchset, options = {}, format = nil, additional_header = {})
