@@ -4,21 +4,26 @@ class FHIRStructureTest < Test::Unit::TestCase
 
   def test_fhir_starburst_root
     structure = Crucible::FHIRStructure.get(:r4)
-    structure['name'] == 'FHIR'
+    assert_equal 'FHIR', structure['name']
+  end
+
+  def test_fhir_starburst_root_r4b
+    structure = Crucible::FHIRStructure.get(:r4b)
+    assert_equal 'FHIR', structure['name']
   end
 
   def test_fhir_starburst_stu3
     structure = Crucible::FHIRStructure.get(:stu3)
-    structure['name'] == 'FHIR'
+    assert_equal 'FHIR', structure['name']
   end
 
   def test_fhir_starburst_root_dstu2
     structure = Crucible::FHIRStructure.get(:dstu2)
-    structure['name'] == 'FHIR'
+    assert_equal 'FHIR', structure['name']
   end
 
   def test_no_duplicate_names_in_starburst
-    [:stu3, :dstu2].each do |version|
+    Crucible::FHIRVersion::KNOWN.each do |version|
       structure = Crucible::FHIRStructure.get(version)
       names = all_names(structure)
 
@@ -27,18 +32,12 @@ class FHIRStructureTest < Test::Unit::TestCase
   end
 
   def fhir_resources(fhir_version=nil)
-
-    resources = FHIR::RESOURCES
-    namespace = 'FHIR'
-    if !fhir_version.nil? && FHIR.constants.include?(fhir_version.upcase)
-      resources = FHIR.const_get(fhir_version.upcase)::RESOURCES
-    end
-    resources
+    Crucible::FHIRVersion.namespace(fhir_version).const_get(:RESOURCES)
   end
 
   def test_no_missing_resources_in_starburst
 
-    [:r4, :stu3, :dstu2].each do |version|
+    Crucible::FHIRVersion::KNOWN.each do |version|
       structure = Crucible::FHIRStructure.get(version)
       resource_subset = structure['children'].select{|c| c['name'] == 'RESOURCES'}.first
       structure_resources = all_names(resource_subset, true).map{|e| e.downcase.delete(' ')}
@@ -61,7 +60,7 @@ class FHIRStructureTest < Test::Unit::TestCase
 
     names = []
 
-    [:dstu2, :stu3, :r4].each do |version|
+    Crucible::FHIRVersion::KNOWN.each do |version|
       structure = Crucible::FHIRStructure.get(version)
       names.concat(all_names(structure).map{|e| e.downcase.delete(' ')})
     end
