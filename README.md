@@ -1,8 +1,12 @@
 # Plan Executor [![Build Status](https://travis-ci.org/fhir-crucible/plan_executor.svg?branch=master)](https://travis-ci.org/fhir-crucible/plan_executor)
 
-Plan Executor runs test suites against a FHIR server. It supports `DSTU2`, `STU3` and `R4` versions of FHIR.
+Plan Executor runs test suites against a FHIR server. The harness recognizes
+`DSTU2`, `STU3`, `R4`, and `R4B` versions of FHIR. Each suite declares its
+supported versions explicitly; recognizing a version does not make every suite
+compatible with it.
 Tests can either be written in [Ruby](https://github.com/fhir-crucible/plan_executor#adding-a-new-test-suite),
 or using the [TestScript Resource](https://github.com/fhir-crucible/plan_executor/wiki/Using-Plan-Executor-with-TestScripts#testscript).
+TestScript execution remains STU3-only.
 
 ## Getting Started
 
@@ -13,10 +17,13 @@ $ bundle exec rake -T
 
 ## Listing Test Suites
 
-List all the available Test Suites, excluding supported `TestScripts`. Pass the version, which can currently be `dstu2`, `stu3` or `r4`.
+List all available Test Suites, excluding supported `TestScripts`. Pass the
+version, which can be `dstu2`, `stu3`, `r4`, or `r4b`. Only suites explicitly
+annotated for the selected version are listed.
 
 ```
 $ bundle exec rake crucible:list_suites[dstu2]
+$ bundle exec rake crucible:list_suites[r4b]
 ```
 
 ## Executing a Test Suite
@@ -24,7 +31,7 @@ $ bundle exec rake crucible:list_suites[dstu2]
 Crucible tests can be executed by suite from the command-line by calling the `crucible-execute` rake task with the following parameters:
 
 * `url` the FHIR endpoint
-* `version` the FHIR version (sequence).  Currently `dstu2`, `stu3` and `r4` are supported.
+* `version` the FHIR version (sequence): `dstu2`, `stu3`, `r4`, or `r4b`.
 * `test` the name of the test suite (see `crucible:list_suites`)
 * `resource` (optional) limit the `test` (applicable to "ResourceTest" or "SearchTest" suites) to a given resource (e.g. "Patient")
 
@@ -66,12 +73,13 @@ module Crucible
 
       def initialize(client1, client2=nil)
         super(client1, client2)
+        @supported_versions = [:r4]
         @category = {id: 'connectathon', title: 'Connectathon'}
       end
 
       def setup
         # create any fixtures you need here
-        @patient = ResourceGenerator.generate(FHIR::Patient,3)
+        @patient = ResourceGenerator.generate(get_resource(:Patient),3)
         reply = @client.create(@patient)
         @id = reply.id
         @body = reply.body
@@ -79,7 +87,7 @@ module Crucible
 
       def teardown
         # perform any clean up here
-        @client.destroy(FHIR::Patient, @id)
+        @client.destroy(get_resource(:Patient), @id)
       end
 
       # test 'KEY', 'DESCRIPTION'
@@ -91,7 +99,7 @@ module Crucible
         }
 
         assert(@id, 'Setup was unable to create a patient.',@body)
-        reply = @client.read(FHIR::Patient, @id)
+        reply = @client.read(get_resource(:Patient), @id)
         assert_response_ok(reply)
         assert_equal @id, reply.id, 'Server returned wrong patient.'
         warning { assert_valid_resource_content_type_present(reply) }
@@ -108,6 +116,8 @@ Every Test Suite needs to override the following methods:
 * `description` The description that is displayed within the Crucible web app
 * `initialize` Use the example above. Change the `@category` -- the `id` and `title`
 determine where the test suite is categorized within the Crucible web app
+and set `@supported_versions` explicitly. A suite is not eligible for any FHIR
+version until that annotation is present.
 * `setup` (optional) Use this method to create fixtures and perform any required
 assertions prior to execution of individual `test` blocks.
 * `test` These blocks are the individual tests within the suites. Each block should start with a `metadata` section so Crucible knows how to tie the success or failures to portions of the FHIR specification (displayed in the web app with a starburst). See `lib/FHIR_structure.json` for the values associated with the `name` keys that you can link to.
