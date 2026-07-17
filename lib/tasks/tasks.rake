@@ -144,10 +144,7 @@ namespace :crucible do
   end
 
   def resolve_fhir_version(version_string)
-    fhir_version = :r4
-    fhir_version = :stu3 if version_string.to_s.downcase == 'stu3'
-    fhir_version = :dstu2 if version_string.to_s.downcase == 'dstu2'
-    fhir_version
+    Crucible::FHIRVersion.resolve(version_string)
   end
 
   def execute_test(url, client, key, resourceType=nil, output=nil)

@@ -12,6 +12,7 @@ require 'active_support/inflector'
 require 'active_support/core_ext'
 require 'jsonpath'
 
+require_relative File.join('.','fhir_version.rb')
 require_relative File.join('.','executor.rb')
 require_relative File.join('.','test_result.rb')
 require_relative File.join('.','resource_generator.rb')
