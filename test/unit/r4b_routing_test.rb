@@ -98,7 +98,7 @@ class R4BRoutingTest < Test::Unit::TestCase
     assert_same FHIR::R4B, resources.instance_variable_get(:@namespace)
   end
 
-  def test_resource_suite_metadata_does_not_advertise_unaudited_r4b_support
+  def test_resource_suite_metadata_advertises_r4b_support
     resource_test = Crucible::Tests::ResourceTest.new(nil)
     resource_suite_metadata = Crucible::Tests::SuiteEngine.list_all.values.select do |metadata|
       metadata.key?('resource_class')
@@ -107,7 +107,7 @@ class R4BRoutingTest < Test::Unit::TestCase
       metadata['supported_versions'].include?(:r4b)
     end
 
-    assert_not_include resource_test.supported_versions, :r4b
-    assert_false advertises_r4b
+    assert_include resource_test.supported_versions, :r4b
+    assert_true advertises_r4b
   end
 end

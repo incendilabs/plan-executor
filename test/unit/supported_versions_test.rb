@@ -12,16 +12,17 @@ class SupportedVersionsTest < Test::Unit::TestCase
   end
 
   def test_resource_suites_preserve_their_existing_version_support
-    expected = [:dstu2, :stu3, :r4]
+    expected = [:dstu2, :stu3, :r4, :r4b]
 
     assert_equal expected, Crucible::Tests::ResourceTest.new(nil).supported_versions
     assert_equal expected, Crucible::Tests::SearchTest.new(nil).supported_versions
   end
 
-  def test_only_audited_suites_advertise_r4b
+  def test_every_r4_suite_advertises_r4b
     suites = Crucible::Tests::SuiteEngine.new.tests
+    r4_suites = suites.select { |suite| suite.supported_versions.include?(:r4) }
     r4b_suites = suites.select { |suite| suite.supported_versions.include?(:r4b) }
 
-    assert_equal [Crucible::Tests::FormatTest], r4b_suites.map(&:class)
+    assert_equal r4_suites.map(&:class).sort_by(&:name), r4b_suites.map(&:class).sort_by(&:name)
   end
 end
