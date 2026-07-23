@@ -6,7 +6,11 @@
 - Never allow R4B to resolve through implicit R4 fallback.
 - Shared R4/R4B behavior is allowed only through explicit compatibility annotations.
 - Keep R4 models at the existing top-level `FHIR::*` namespace for backward compatibility and expose R4B models through the required `FHIR::R4B::*` namespace.
-- An omitted version may continue to default to R4, but an explicitly supplied unknown version must fail fast.
+- Require an explicit version at every client, task, structure, fixture, and
+  resource-generator boundary. Omitted and unknown versions must fail fast.
+- `fhir_client` may use the explicit sentinel `fhir_version: :auto` only for
+  CapabilityStatement discovery. Versioned resource operations must remain
+  unavailable until discovery selects a concrete version.
 - Keep version annotations explicit, even for resources that are normative or unchanged across R4 and R4B.
 - Add R4B model support to `fhir_models`; do not introduce a separate R4B model gem by default.
 - Keep the registry of versions understood by the harness separate from the versions supported by each test suite.
@@ -28,17 +32,32 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
   `cf7f5d5a`, `03059207`, `90cd55fd`, `67738dfe`, and `444f74f7`.
 - `fhir_client` now has explicit R4B routing and CapabilityStatement version
   detection in commit `7bde8ed2`.
+- Strict client versioning is a separate breaking change in commit `75d3c33`:
+  `FHIR::Client.new` requires `fhir_version:`, direct R4 remains
+  `fhir_version: :r4`, and automatic discovery must be requested with
+  `fhir_version: :auto`.
 - `plan-executor` now has a central version registry, version-aware resource
   routing, a generated R4B structure index, corrected version-specific fixture
   lookup, and explicit suite compatibility annotations. These changes are split
   across commits `17537c9a`, `2e7a759`, `d70c01c`, `12e10e8`, and `a2b1482`.
-- `FormatTest` is the first executable suite audited for R4B compatibility.
-  All remaining suites must still be audited individually before `:r4b` is
-  added to their annotations.
+- Strict harness versioning and namespace-explicit generator helpers are in
+  commit `16347df`.
+- All 12 executable Ruby suites that already support R4 now explicitly support
+  R4B in commit `826433b`. STU3-only, DSTU2-only, TestScript, and explicitly
+  unsupported suites retain their existing annotations.
+- The R4B PackagedProductDefinition fixture defect is resolved. Empty generated
+  `CodeableReference` values now receive a same-namespace text concept, so
+  recursive `containedItem.item` elements remain present when serialized. The
+  fix is commit `49e713f`.
+- The nondeterministic R4B Questionnaire defect is resolved. Generated codes
+  are selected from concrete expansion entries while abstract and inactive
+  entries remain available in the checked-in terminology definitions. The fix
+  is commit `84fa7c4`.
 - Remaining integration work consists of publishing or pinning compatible
   `fhir_models` and `fhir_client` revisions, updating dependency resolution,
-  auditing candidate suites, and running endpoint smoke tests and the final
-  cross-version regression matrix.
+  and running the final cross-version regression matrix. Immutable dependency
+  revisions must be selected after the feature branches are rebased into
+  `origin/master`, because those merges change the commit SHAs.
 
 ## Baseline And Dependency Actions
 
@@ -155,11 +174,12 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
 - Keep `supported_versions` as the explicit suite compatibility annotation.
 - `BaseTest#supported_versions` defaults to an empty list. Do not add `:r4b` or
   any other implicit compatibility to that default.
-- Audit every suite and add `:r4b` only after its behavior, resources, fixtures, and assertions have been checked against R4B.
+- Add `:r4b` explicitly to each compatible suite; do not infer R4B support from
+  R4 support at runtime.
 - All executable suites now have explicit annotations. Seven suites that
   previously relied on the base default explicitly preserve their existing
-  compatibility; `FormatTest` gained R4B only after its focused and endpoint
-  audits. No suite gains R4B support implicitly.
+  compatibility. All 12 suites that support R4 now also declare R4B explicitly.
+  No suite gains R4B support implicitly.
 - Update resource-based suite enumeration so it intersects known versions, the suite's declared `supported_versions`, and resources available in that version. It must not overwrite a suite's declared compatibility.
 - Ensure suite listing and suite execution use the same compatibility decision.
 - Keep TestScripts STU3-only unless separate R4B TestScripts and an R4B TestScript parser are deliberately added.
@@ -177,6 +197,11 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
 ### 2. R4B Routing In `fhir_client`
 
 - Add `use_r4b` and route `:r4b` resource lookup, parsing, request replay, response validation, transactions, operations, and capability statements through `FHIR::R4B`.
+- Require `fhir_version:` when constructing a client. Do not retain R4 as a
+  constructor default.
+- Permit `fhir_version: :auto` only as an explicit discovery mode. Metadata may
+  establish a concrete version, but resource operations must reject `:auto`
+  until that has happened.
 - Make JSON and XML reply parsing select R4B explicitly instead of allowing the existing non-DSTU2/STU3 fallback to use R4.
 - Map CapabilityStatement `fhirVersion` values explicitly: `4.0.x` to `:r4` and `4.3.x` to `:r4b`.
 - Do not classify every version beginning with `4` as R4. Unknown FHIR 4.x releases must be reported as unsupported rather than silently parsed as R4.
@@ -184,7 +209,8 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
 
 ### 3. R4B Routing In `plan-executor`
 
-- Add `r4b` parsing to the rake version resolver and test that omitted versions default to R4 while unknown supplied values fail fast.
+- Add `r4b` parsing to the rake version resolver and test that omitted and
+  unknown versions fail fast.
 - Replace scattered version conditionals with a central namespace resolver where practical.
 - Add explicit R4B namespace and resource resolution in `BaseTest`, `BaseSuite`, OperationOutcome parsing, capability statement handling, fixture validation, resource category lookup, and resource generation helpers.
 - Initialize R4B base resources with the active client without affecting R4, STU3, or DSTU2 resources.
@@ -230,7 +256,8 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
 - `bundle exec rake crucible:list_all[r4b]` lists only suites explicitly annotated for R4B.
 - Resource-based suites instantiate R4B classes, not R4 classes, and only enumerate resources present in `FHIR::R4B::RESOURCES`.
 - Listing and executing suites apply identical version eligibility rules.
-- An omitted CLI version still selects R4; an unknown supplied version exits with a clear error.
+- An omitted or unknown CLI version exits with a clear error. R4 must be
+  selected explicitly with `r4`.
 - `FHIR_structure_r4b.json` passes resource-list consistency and duplicate-name checks.
 - Version-specific fixture override selection has focused unit coverage.
 - `FormatTest` passes all 22 cases against a Spark endpoint whose
@@ -255,8 +282,8 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
 - Only suites whose existing `supported_versions` declaration contained `:r4`
   were temporarily given `:r4b`. STU3-only, DSTU2-only, TestScript, and
   explicitly unsupported suites were not enabled. These temporary annotations
-  were made in an isolated copy and are not evidence that every suite should be
-  permanently annotated for R4B.
+  were made in an isolated copy. The later 2026-07-23 verification below
+  records the permanent annotations after strict version routing was added.
 - The normal suite registry exposed 12 eligible suites. Eligibility was checked
   with:
 
@@ -365,13 +392,12 @@ they are not 16 independent compatibility defects.
    PackagedProductDefinition recursion, and Questionnaire item-type selection.
 2. Make the resource generator namespace-aware where it currently dispatches
    only on top-level R4 classes. Review the rest of `apply_invariants!` for the
-   same pattern before adding broad R4B suite annotations.
+   same pattern.
 3. Fix and rerun the three targeted commands above, including
    `TransactionAndBatchTest` through `crucible:execute`.
 4. Repeat the complete 12-suite R4B endpoint run and retain per-suite output and
    shell exit status.
-5. Permanently add `:r4b` only to suites that pass their focused audit, then run
-   the existing R4 unit and endpoint regression suites to detect shared
+5. Run the existing R4 unit and endpoint regression suites to detect shared
    generator regressions.
 
 ### Existing Endpoint Regression Baselines
@@ -388,17 +414,165 @@ baseline for later cross-version regression runs.
 Future runs should compare both the totals and the individual skipped tests.
 The totals alone do not establish whether a changed skip is expected.
 
+## Strict Versioning Docker Verification (2026-07-23)
+
+- The Docker image was built with the repository `Dockerfile` and a disposable
+  build context containing the current local `fhir_client`, `fhir_models`,
+  `fhir_stu3_models`, and `fhir_dstu2_models` working trees as `path:`
+  dependencies. The resulting image was
+  `incendi/plan_executor:strict-r4b`, image ID
+  `sha256:b5ae435552fd1305d072c021d1b140db1461daa2b23d2cd1183855ec96bfa975`.
+- The plan-executor unit suite passed `1218` tests and `3680` assertions with no
+  failures or errors inside that image.
+- Focused `fhir_client` coverage for required versions, `:auto`, R4B routing,
+  and external references passed `79` tests and `186` assertions with no
+  failures or errors.
+- The complete modified `fhir_client` suite reported `114` tests, `269`
+  assertions, and the same five errors reproduced by the committed baseline in
+  the identical container. Four are caused by invalid JSON escapes in the
+  existing `fhir_api_validation.json`; one is existing shared model-client
+  state in `test_class_partial_update`. The strict-versioning change introduced
+  no additional full-suite failures.
+- The CI-style Compose run used
+  `sparkfhir/spark:r4b-latest` image ID
+  `sha256:d5139dcba0a3e17aac71b36d31271326111248ad4af1bc16b095d423f2b7d2d8`
+  and `sparkfhir/mongo:r4b-latest` image ID
+  `sha256:9c8e741da8cbce3b5e10e845717c368f41a2e27311912541ed2192110d4d7741`.
+  The initial
+  `./execute_all.sh http://spark:8080/fhir r4b html|json|stdout` run included
+  only `FormatTest` and passed all `22` cases. The expanded run is recorded
+  below.
+
+## R4B Enabled-Suite Verification (2026-07-23)
+
+- Every Ruby suite that declares R4 support now also explicitly declares R4B
+  support. `crucible:list_suites[r4b]` lists 12 suites:
+  `ReadTest`, `ResourceTest`, `FhirPathPatchTest`, `FormatTest`,
+  `TransactionAndBatchTest`, `SearchTest`, `HistoryTest`, `RobustSearchTest`,
+  `SprinklerSearchTest`, `ConsentSearchByPatientReferenceTest`,
+  `ElementsSearchParameterTest`, and `UnknownSearchParameterTest`.
+- `FhirPathPatchTest` now obtains `MedicationRequest` through its selected
+  version namespace instead of using the top-level R4 model class. An audit of
+  the other 11 suites found no unversioned resource-model constants.
+- A unit invariant requires the set of R4 suites and the set of R4B suites to
+  remain identical. The Docker unit run passed `1218` tests and `3680`
+  assertions with no failures or errors.
+- The CI-style endpoint command was:
+
+  ```sh
+  docker compose run --rm --no-deps plan_executor \
+    ./execute_all.sh http://spark:8080/fhir r4b 'html|json|stdout'
+  ```
+
+- The disposable plan-executor image was
+  `incendi/plan_executor:all-r4b`, image ID
+  `sha256:7891bc0c6347a99b54d5b5382b9081d7c8b422aee6bd3d85ca93e73c4cdd3221`.
+  The Spark and Mongo image IDs were
+  `sha256:d5139dcba0a3e17aac71b36d31271326111248ad4af1bc16b095d423f2b7d2d8`
+  and
+  `sha256:9c8e741da8cbce3b5e10e845717c368f41a2e27311912541ed2192110d4d7741`.
+- The endpoint run completed 3,585 tests in 234 seconds:
+
+  | Pass | Fail | Error | TODO skip |
+  | ---: | ---: | ---: | ---: |
+  | 3149 | 8 | 0 | 428 |
+
+- All eight failures in this run were in
+  `ResourceTest_PackagedProductDefinition`. Three create or update requests
+  were rejected because generated nested package entries omitted required
+  `containedItem.item`; five conditional and history assertions then failed
+  because those resources were not created.
+- All 428 skips remain existing `TODO` skips. FHIR TestScript artifacts remain
+  explicitly STU3-only and were not part of this R4B run.
+
+### PackagedProductDefinition Generator Fix
+
+- The root cause was a recursion-boundary `CodeableReference` object with
+  neither `concept` nor `reference`. Although the required object existed in
+  memory, it serialized as an empty object and the effective
+  `containedItem.item` element was omitted.
+- `ResourceGenerator` now gives an otherwise empty generated
+  `CodeableReference` a text-only `CodeableConcept` from the selected FHIR
+  namespace. Existing concept or reference values are preserved. This is a
+  datatype invariant rather than a PackagedProductDefinition-specific
+  traversal.
+- Focused unit coverage checks empty and populated R4B CodeableReference
+  behavior, every recursively generated contained item, and R4B XML schema
+  validation. The Docker unit suite passed `1221` tests and `3688` assertions
+  with no failures or errors.
+- A fresh focused endpoint run of
+  `ResourceTest_PackagedProductDefinition` completed with `15` passes, no
+  failures or errors, and the existing `3` TODO skips.
+- A subsequent fresh 12-suite run confirmed the same PackagedProductDefinition
+  result. The aggregate result was `3151` passes, `6` failures, no errors, and
+  `428` TODO skips. All six failures were the separately documented
+  nondeterministic Questionnaire `type: question` defect; none belonged to
+  PackagedProductDefinition.
+- Verification used `incendi/plan_executor:packaged-product-fix`, image ID
+  `sha256:b8a9ee41b11496a99e38a6dc93ba061d720075477c31d9ea5deafcf6f5900c62`,
+  with the same R4B Spark and Mongo image IDs recorded above.
+
+### Questionnaire Selectable-Code Fix
+
+- Generated model metadata continues to contain the complete required
+  `QuestionnaireItemType` code set, including the abstract `question` grouping
+  code. The terminology artifacts and generated models were not rewritten.
+- `ResourceGenerator` now derives a cached selectable-code set from the
+  namespace's original ValueSet expansion. Entries marked `abstract` or
+  `inactive` are excluded from generated instances, while concrete descendants
+  of abstract grouping entries remain selectable.
+- The same filtering is used for primitive `code`, `Coding`, and
+  `CodeableConcept` generation. If a binding has no matching expansion or
+  filtering would remove every generated code, the existing generated metadata
+  remains the fallback.
+- Focused tests prove that the complete R4B Questionnaire metadata still
+  includes `question`, the selectable set excludes it, and every recursively
+  generated Questionnaire item uses a selectable type. The Docker unit suite
+  passed `1224` tests and `3694` assertions with no failures or errors.
+- Three initial consecutive `ResourceTest_Questionnaire` endpoint runs each
+  completed with `15` passes and the existing `3` TODO skips. After correcting
+  the cache scope to cache expansion data rather than field-specific
+  intersections, the final image produced the same focused result and no
+  generated Questionnaire payload contained `type: question`.
+- A final fresh 12-suite R4B run completed in 236 seconds with `3157` passes,
+  no failures or errors, and `428` existing TODO skips. The command exited
+  successfully, and PackagedProductDefinition remained clean in the same run.
+- Verification used `incendi/plan_executor:questionnaire-fix`, image ID
+  `sha256:f6dda44f11bcf8eafac55695d4e9f066f377473b3310963e2b3d94fa83ca7680`,
+  with the same R4B Spark and Mongo image IDs recorded above.
+
+### R4 Regression Verification
+
+- The final Questionnaire implementation was run against the fresh
+  `sparkfhir/spark:r4-latest` and `sparkfhir/mongo:r4-latest` images, with image
+  IDs
+  `sha256:411d6ea0d92c8001359eec3d749c643a28b207f3ac6f0f3362f1d39081348bf7`
+  and
+  `sha256:cf64b34e58f6f88f5350cef5066456f69585e4ec4716bcdb56579e3153950e4c`.
+  The plan-executor image was the same final image recorded above.
+- The R4 Spark image contains a local Kestrel HTTPS endpoint configuration but
+  no server certificate. Its first startup therefore entered a restart loop,
+  and that infrastructure-only run was discarded. The clean retry used the
+  disposable environment override
+  `Kestrel__Endpoints__Https__Url=http://+:8080`; neither the image nor
+  repository configuration was changed.
+- The fresh full R4 run completed in 145 seconds with `3267` passes, no failures
+  or errors, and `443` TODO skips. The command exited successfully and exactly
+  matched the recorded R4 aggregate baseline.
+- `ResourceTest_Questionnaire` completed with `15` passes, no failures or
+  errors, and the existing `3` TODO skips. No generated Questionnaire payload
+  contained `type: question`.
+
 ### Deferred STU3 TestScript Regression
 
 - Run the 71 FHIR TestScript artifacts against a STU3 endpoint as a separate
   regression exercise. They remain explicitly STU3-only and are not part of
   either the R4 or R4B suite runs.
-- Before relying on that run, correct or work around the dedicated
-  `crucible:execute_all_testscripts` and `crucible:testreport` tasks. They do not
-  currently accept a FHIR version, do not call `use_fhir_version`, and bypass
-  the normal `supported_versions` filter. Because a new `FHIR::Client` defaults
-  to R4, invoking those tasks as written does not guarantee a STU3 client even
-  though the TestScript artifacts are parsed and annotated as STU3.
+- The dedicated `crucible:execute_all_testscripts` and
+  `crucible:testreport` tasks now require a FHIR version and construct the
+  client with that version. They still bypass the normal suite
+  `supported_versions` filter, so the deferred regression must invoke them with
+  `stu3` explicitly and verify the endpoint version.
 - The eventual regression command must explicitly select `:stu3`, retain
   per-TestScript output and shell exit status, and use a CapabilityStatement to
   confirm that the target endpoint reports STU3 before execution.
@@ -410,8 +584,10 @@ The totals alone do not establish whether a changed skip is expected.
 3. Complete: generate and validate the R4B model set.
 4. Complete: add R4B routing, parsing, capability handling, and detection to `fhir_client`.
 5. Complete: add the central version registry and fail-fast version resolution to `plan-executor`.
-6. In progress: `FormatTest` is audited and enabled; audit additional suites
-   and add explicit R4B compatibility annotations only where verified.
-7. In progress: R4B structures, documentation, and the first endpoint smoke
-   run are complete; additional R4B fixtures, dependency updates, and the full
-   cross-version endpoint regression matrix remain.
+6. Complete: all 12 R4-capable Ruby suites explicitly declare R4B support and
+   have been run against the R4B endpoint.
+7. In progress: update dependencies and complete the STU3 and DSTU2 endpoint
+   regression matrix. Fresh R4 and R4B endpoint runs are complete.
+8. Complete: remove implicit R4 defaults from `fhir_client` and
+   `plan-executor`, make generator namespaces explicit, verify the breaking
+   change in Docker, and commit it atomically.
