@@ -1,10 +1,18 @@
 require_relative '../test_helper'
 
 class FHIRVersionTest < Test::Unit::TestCase
-  def test_omitted_version_defaults_to_r4
-    assert_equal :r4, Crucible::FHIRVersion.resolve
-    assert_equal :r4, Crucible::FHIRVersion.resolve('')
-    assert_equal :r4, Crucible::FHIRVersion.resolve('  ')
+  def test_omitted_version_is_rejected
+    assert_raise(ArgumentError) do
+      Crucible::FHIRVersion.resolve
+    end
+
+    [nil, '', '  '].each do |version|
+      error = assert_raise(Crucible::FHIRVersion::UnsupportedVersionError) do
+        Crucible::FHIRVersion.resolve(version)
+      end
+
+      assert_match(/FHIR version is required/, error.message)
+    end
   end
 
   def test_known_versions_are_resolved_explicitly
@@ -30,6 +38,7 @@ class FHIRVersionTest < Test::Unit::TestCase
     assert_equal :stu3, Crucible::FHIRVersion.for_class(FHIR::STU3::Patient)
     assert_equal :r4, Crucible::FHIRVersion.for_class(FHIR::Patient)
     assert_equal :r4b, Crucible::FHIRVersion.for_class(FHIR::R4B::Patient)
+    assert_equal :r4b, Crucible::FHIRVersion.for_class(FHIR::R4B::Patient.new)
   end
 
   def test_unknown_version_fails_instead_of_falling_back_to_r4

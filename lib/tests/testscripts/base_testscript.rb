@@ -78,6 +78,14 @@ module Crucible
         load_fixtures
       end
 
+      def version_namespace
+        if @client && @client.fhir_version != :stu3
+          raise ArgumentError, "FHIR TestScripts require STU3, got #{@client.fhir_version}"
+        end
+
+        FHIR::STU3
+      end
+
       def author
         @testscript.name
       end

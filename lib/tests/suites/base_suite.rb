@@ -32,11 +32,9 @@ module Crucible
       # move to another area?
       # also, this may be causing a problem on the fhir starburst structure
       def fhir_version
-        if @client.nil?
-          :r4
-        else
-          @client.fhir_version
-        end
+        raise ArgumentError, 'A versioned FHIR client is required' unless @client
+
+        @client.fhir_version
       end
 
       def get_resource(resource)
@@ -60,7 +58,7 @@ module Crucible
         Crucible::FHIRVersion.namespace(fhir_version).const_get(:RESOURCES).include?(resource.to_s)
       end
 
-      def self.fhir_resources(fhir_version=nil)
+      def self.fhir_resources(fhir_version)
         namespace = Crucible::FHIRVersion.namespace(fhir_version)
         namespace.const_get(:RESOURCES)
           .reject { |resource| EXCLUDED_RESOURCES.include?(resource) }

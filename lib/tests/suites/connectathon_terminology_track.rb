@@ -212,7 +212,7 @@ module Crucible
           validates resource: 'ValueSet', methods: ['create']
         }
 
-        @resources = Crucible::Generator::Resources.new
+        @resources = Crucible::Generator::Resources.new(fhir_version)
         @codesystem_simple = @resources.codesystem_simple
         @valueset_simple = @resources.valueset_simple
 
@@ -325,7 +325,7 @@ module Crucible
           validates resource: 'ConceptMap', methods: ['create']
         }
 
-        @resources = Crucible::Generator::Resources.new
+        @resources = Crucible::Generator::Resources.new(fhir_version)
         @conceptmap_simple = @resources.conceptmap_simple
         @conceptmap_simple.id = nil
         @conceptmap_simple.url = @conceptmap_simple.url + rand(10000000).to_s

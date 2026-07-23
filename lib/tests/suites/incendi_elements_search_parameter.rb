@@ -18,7 +18,7 @@ module Crucible
       end
 
       def setup
-        @patient = ResourceGenerator.minimal_patient('elements-search-parameter', 'Elements', version_namespace)
+        @patient = ResourceGenerator.minimal_patient('elements-search-parameter', 'Elements', namespace: version_namespace)
         @patient.gender = 'male'
         @patient.birthDate = '1974-12-25'
 

@@ -81,7 +81,8 @@ module Crucible
         end
       end
 
-      def self.generate_metadata
+      def self.generate_metadata(fhir_version)
+        version = Crucible::FHIRVersion.resolve(fhir_version)
         metadata = {}
         puts "---"
         puts "BUILDING METADATA"
@@ -89,8 +90,8 @@ module Crucible
         SuiteEngine.new.tests.each do |test|
           test_file = Crucible::Tests.const_get(test).new(nil)
           if test_file.respond_to? 'resource_class='
-            Crucible::Tests::BaseSuite.fhir_resources.each do |klass|
-              test_file.resource_class = Module.const_get("FHIR::#{klass}")
+            Crucible::Tests::BaseSuite.fhir_resources(version).each do |klass|
+              test_file.resource_class = klass
               puts "---"
               puts "BUILDING METADATA - #{test}#{klass}"
               puts "---"

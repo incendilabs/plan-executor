@@ -64,18 +64,24 @@ module Crucible
           validates resource: nil, methods: ['transaction-system']
         }
 
-        @patient0 = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Transaction', version_namespace)
+        @patient0 = ResourceGenerator.minimal_patient("#{Time.now.to_i}", 'Transaction', namespace: version_namespace)
         patient0_id = SecureRandom.uuid
         patient0_uri = "urn:uuid:#{patient0_id}"
 
         # height
-        @obs0a = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',170,'cm',patient0_id)
+        @obs0a = ResourceGenerator.minimal_observation('http://loinc.org', '8302-2', 170, 'cm', patient0_id, namespace: version_namespace)
         @obs0a.subject.reference = patient0_uri
         # weight
-        @obs0b = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',200,'kg',patient0_id)
+        @obs0b = ResourceGenerator.minimal_observation('http://loinc.org', '3141-9', 200, 'kg', patient0_id, namespace: version_namespace)
         @obs0b.subject.reference = patient0_uri
         # obesity
-        @condition0 = ResourceGenerator.minimal_condition('http://snomed.info/sct','414915002',patient0_id, version_namespace, patient0_uri)
+        @condition0 = ResourceGenerator.minimal_condition(
+          'http://snomed.info/sct',
+          '414915002',
+          patient0_id,
+          namespace: version_namespace,
+          patient_ref: patient0_uri
+        )
 
         @client.begin_transaction
         @client.add_transaction_request('POST',nil,@patient0).fullUrl = patient0_uri
@@ -135,7 +141,7 @@ module Crucible
         assert @created_patient_record, 'Could not create patient in XFER0.'
 
         # patient has gained weight
-        @obs1 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',250,'kg',@patient0.id, version_namespace)
+        @obs1 = ResourceGenerator.minimal_observation('http://loinc.org', '3141-9', 250, 'kg', @patient0.id, namespace: version_namespace)
 
         @client.begin_transaction
         @client.add_transaction_request('POST',nil,@patient0,"identifier=#{@patient0.identifier.first.system}|#{@patient0.identifier.first.value}").fullUrl = "urn:uuid:#{SecureRandom.uuid}"
@@ -171,7 +177,7 @@ module Crucible
         assert @created_patient_record, 'Could not create patient in XFER0.'
 
         # weight
-        @obs2 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',100,'kg',@patient0.id, version_namespace)
+        @obs2 = ResourceGenerator.minimal_observation('http://loinc.org', '3141-9', 100, 'kg', @patient0.id, namespace: version_namespace)
         # obesity has been refuted
         if fhir_version == :dstu2
           @condition0.patient.reference = "Patient/#{@patient0.id}"
@@ -215,7 +221,7 @@ module Crucible
         }
         assert @created_patient_record, 'Could not create patient in XFER0.'
 
-        @patient1 = ResourceGenerator.minimal_patient(@patient0.identifier.first.value,@patient0.name.first.given.first, version_namespace)
+        @patient1 = ResourceGenerator.minimal_patient(@patient0.identifier.first.value, @patient0.name.first.given.first, namespace: version_namespace)
         reply = @client.create @patient1
         assert_response_ok(reply)
         @patient1.id = (reply.resource.try(:id) || reply.id)
@@ -254,9 +260,9 @@ module Crucible
         assert @created_patient_record, 'Could not create patient in XFER0.'
 
         # height observation
-        @obs3 = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',177,'cm',@patient0.id, version_namespace)
+        @obs3 = ResourceGenerator.minimal_observation('http://loinc.org', '8302-2', 177, 'cm', @patient0.id, namespace: version_namespace)
         # weight observation
-        @obs4 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',105,'kg',@patient0.id, version_namespace)
+        @obs4 = ResourceGenerator.minimal_observation('http://loinc.org', '3141-9', 105, 'kg', @patient0.id, namespace: version_namespace)
         # give this *weight* observation the ID of the *height* observation created in XFER1
         @obs4.id = @obs0a.id
 
@@ -436,10 +442,10 @@ module Crucible
 
         skip 'TODO: https://github.com/FirelyTeam/spark/issues/306'
 
-        @batch_patient = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Batch', version_namespace)
+        @batch_patient = ResourceGenerator.minimal_patient("#{Time.now.to_i}", 'Batch', namespace: version_namespace)
         @batch_patient_id = "urn:uuid:#{SecureRandom.uuid}" # assign an id so related resources can reference the patient
         # height
-        @batch_obs = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',900,'cm',@batch_patient_id, version_namespace)
+        @batch_obs = ResourceGenerator.minimal_observation('http://loinc.org', '8302-2', 900, 'cm', @batch_patient_id, namespace: version_namespace)
         @batch_obs.subject.reference = @batch_patient_id
 
         @client.begin_batch
@@ -479,15 +485,15 @@ module Crucible
 
         skip 'TODO: https://github.com/FirelyTeam/spark/issues/305'
 
-        @batch_patient_2 = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'Batch', version_namespace)
+        @batch_patient_2 = ResourceGenerator.minimal_patient("#{Time.now.to_i}", 'Batch', namespace: version_namespace)
         reply = @client.create @batch_patient_2
         assert_response_ok(reply)
         @batch_patient_2.id = (reply.resource.try(:id) || reply.id)
 
         # height
-        @batch_obs_2 = ResourceGenerator.minimal_observation('http://loinc.org','8302-2',300,'cm',@batch_patient_2.id, version_namespace)
+        @batch_obs_2 = ResourceGenerator.minimal_observation('http://loinc.org', '8302-2', 300, 'cm', @batch_patient_2.id, namespace: version_namespace)
         # weight
-        @batch_obs_3 = ResourceGenerator.minimal_observation('http://loinc.org','3141-9',500,'kg',@batch_patient_2.id, version_namespace)
+        @batch_obs_3 = ResourceGenerator.minimal_observation('http://loinc.org', '3141-9', 500, 'kg', @batch_patient_2.id, namespace: version_namespace)
 
         @client.begin_batch
         @client.add_batch_request('POST',nil,@batch_obs_2).fullUrl = "urn:uuid:#{SecureRandom.uuid}"
@@ -554,7 +560,7 @@ module Crucible
         }
 
         # Create a Patient and capture the ETag from the response
-        @ifmatch_patient = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'IfMatch', version_namespace)
+        @ifmatch_patient = ResourceGenerator.minimal_patient("#{Time.now.to_i}", 'IfMatch', namespace: version_namespace)
         reply = @client.create @ifmatch_patient
         assert_response_ok(reply)
         @ifmatch_patient.id = (reply.resource.try(:id) || reply.id)
@@ -587,7 +593,7 @@ module Crucible
         }
 
         # Create a Patient
-        @ifmatch_patient_2 = ResourceGenerator.minimal_patient("#{Time.now.to_i}",'IfMatch2', version_namespace)
+        @ifmatch_patient_2 = ResourceGenerator.minimal_patient("#{Time.now.to_i}", 'IfMatch2', namespace: version_namespace)
         reply = @client.create @ifmatch_patient_2
         assert_response_ok(reply)
         @ifmatch_patient_2.id = (reply.resource.try(:id) || reply.id)

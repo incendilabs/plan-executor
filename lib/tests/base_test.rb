@@ -51,7 +51,9 @@ module Crucible
       end
 
       def version_namespace
-        Crucible::FHIRVersion.namespace(@client&.fhir_version)
+        raise ArgumentError, 'A versioned FHIR client is required' unless @client
+
+        Crucible::FHIRVersion.namespace(@client.fhir_version)
       end
 
       def multiserver

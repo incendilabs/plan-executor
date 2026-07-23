@@ -1,6 +1,5 @@
 module Crucible
   module FHIRVersion
-    DEFAULT = :r4
     NAMESPACES = {
       dstu2: 'FHIR::DSTU2',
       stu3: 'FHIR::STU3',
@@ -11,9 +10,12 @@ module Crucible
 
     class UnsupportedVersionError < ArgumentError; end
 
-    def self.resolve(value = nil)
+    def self.resolve(value)
       normalized = value.to_s.strip.downcase
-      return DEFAULT if normalized.empty?
+      if normalized.empty?
+        raise UnsupportedVersionError,
+              "FHIR version is required. Supported versions: #{KNOWN.join(', ')}"
+      end
 
       version = normalized.to_sym
       return version if KNOWN.include?(version)
@@ -22,13 +24,13 @@ module Crucible
             "Unsupported FHIR version '#{value}'. Supported versions: #{KNOWN.join(', ')}"
     end
 
-    def self.namespace(value = nil)
+    def self.namespace(value)
       namespace_name(value).split('::').inject(Object) do |parent, name|
         parent.const_get(name)
       end
     end
 
-    def self.namespace_name(value = nil)
+    def self.namespace_name(value)
       NAMESPACES.fetch(resolve(value))
     end
 

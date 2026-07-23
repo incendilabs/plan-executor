@@ -39,7 +39,7 @@ module Crucible
 
         skip 'TODO: https://github.com/FirelyTeam/spark/issues/310'
 
-        match_patient = Crucible::Generator::Resources.new.minimal_patient
+        match_patient = Crucible::Generator::Resources.new(fhir_version).minimal_patient
         match_patient.identifier = nil
         reply = @client.match(match_patient)
         assert_response_ok(reply)

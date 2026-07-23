@@ -19,7 +19,7 @@ module Crucible
 
       def setup
 
-        @patient = ResourceGenerator.minimal_patient(nil, nil, version_namespace)
+        @patient = ResourceGenerator.minimal_patient(nil, nil, namespace: version_namespace)
         reply = @client.create(@patient)
         assert_response_ok(reply)
         @patient_id = reply.id

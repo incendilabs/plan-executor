@@ -4,7 +4,7 @@ module Crucible
 
       FIXTURE_DIR = File.join(File.expand_path(File.join('..','..','..'),File.absolute_path(__FILE__)), 'fixtures')
 
-      def initialize(fhir_version = nil)
+      def initialize(fhir_version)
         @fhir_version = fhir_version
         @namespace = Crucible::FHIRVersion.namespace(@fhir_version)
       end
