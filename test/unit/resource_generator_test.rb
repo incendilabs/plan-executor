@@ -39,6 +39,42 @@ class ResourceGeneratorTest < Test::Unit::TestCase
     end
   end
 
+  def test_empty_r4b_codeable_reference_gets_a_concept
+    reference = Crucible::Tests::ResourceGenerator.generate(FHIR::R4B::CodeableReference)
+
+    assert_instance_of FHIR::R4B::CodeableConcept, reference.concept
+    assert_not_empty reference.concept.text
+    assert_nil reference.reference
+  end
+
+  def test_populated_r4b_codeable_reference_is_preserved
+    reference = FHIR::R4B::CodeableReference.new
+    reference.reference = FHIR::R4B::Reference.new(display: 'Existing reference')
+
+    Crucible::Tests::ResourceGenerator.apply_invariants!(reference)
+
+    assert_nil reference.concept
+    assert_equal 'Existing reference', reference.reference.display
+  end
+
+  def test_r4b_packaged_product_definition_has_valid_contained_items
+    resource = Crucible::Tests::ResourceGenerator.generate(FHIR::R4B::PackagedProductDefinition, 5)
+    packages = [resource.package].compact
+    contained_items = []
+
+    until packages.empty?
+      package = packages.shift
+      contained_items.concat(package.containedItem || [])
+      packages.concat(package.package || [])
+    end
+
+    assert_not_empty contained_items
+    assert_true contained_items.all? do |contained_item|
+      contained_item.item && (contained_item.item.concept || contained_item.item.reference)
+    end
+    assert_empty FHIR::R4B::Xml.validate(resource.to_xml).map(&:message)
+  end
+
   def run_generator(resource_type, version, max_depth)
 
     klass_namespace = "FHIR"
