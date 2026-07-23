@@ -20,8 +20,7 @@ class FormatSuiteTest < Test::Unit::TestCase
 
   def execute_format_suite(version, specification_version)
     @namespace = Crucible::FHIRVersion.namespace(version)
-    @client = FHIR::Client.new(BASE_URL)
-    @client.use_fhir_version(version)
+    @client = FHIR::Client.new(BASE_URL, fhir_version: version)
     @created_patient = nil
     stub_capability_statement(specification_version)
     stub_create

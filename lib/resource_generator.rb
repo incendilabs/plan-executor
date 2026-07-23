@@ -180,11 +180,11 @@ module Crucible
         oid
       end
 
-      def self.minimal_patient(identifier='0',name='Name', namespace = FHIR)
+      def self.minimal_patient(identifier='0', name='Name', namespace:)
         resource = namespace.const_get(:Patient).new
-        resource.identifier = [ minimal_identifier(identifier) ]
-        resource.name = [ minimal_humanname(name) ]
-        tag_metadata(resource)
+        resource.identifier = [minimal_identifier(identifier, namespace: namespace)]
+        resource.name = [minimal_humanname(name, namespace: namespace)]
+        tag_metadata(resource, namespace: namespace)
       end
 
       # Common systems:
@@ -192,21 +192,21 @@ module Crucible
       #   LOINC   http://loinc.org
       #   ICD-10  http://hl7.org/fhir/sid/icd-10
       # units: must be UCOM
-      def self.minimal_observation(system='http://loinc.org',code='8302-2',value=170,units='cm',patientId=nil, namespace = FHIR)
+      def self.minimal_observation(system='http://loinc.org', code='8302-2', value=170, units='cm', patientId=nil, namespace:)
         resource = namespace.const_get(:Observation).new
         resource.status = 'final'
-        resource.code = minimal_codeableconcept(system,code, namespace)
+        resource.code = minimal_codeableconcept(system, code, namespace: namespace)
         if patientId
           ref = namespace.const_get(:Reference).new
           ref.reference = "Patient/#{patientId}"
           resource.subject = ref
         end
-        resource.valueQuantity = minimal_quantity(value,units, namespace)
-        tag_metadata(resource)
+        resource.valueQuantity = minimal_quantity(value, units, namespace: namespace)
+        tag_metadata(resource, namespace: namespace)
       end
 
       # Default system/code are for SNOMED "Obese (finding)"
-      def self.minimal_condition(system='http://snomed.info/sct',code='414915002',patientId=nil, namespace = FHIR, patientRef=nil)
+      def self.minimal_condition(system='http://snomed.info/sct', code='414915002', patientId=nil, namespace:, patient_ref: nil)
         resource = namespace.const_get(:Condition).new
         if resource.is_a?(FHIR::DSTU2::Condition)
           resource.patient = namespace.const_get(:Reference).new
@@ -215,8 +215,8 @@ module Crucible
           else
             resource.patient.display = 'Patient'
           end
-          if (patientRef)
-            resource.patient.reference = patientRef
+          if patient_ref
+            resource.patient.reference = patient_ref
           end
         else
           resource.subject = namespace.const_get(:Reference).new
@@ -225,17 +225,17 @@ module Crucible
           else
             resource.subject.display = 'Patient'
           end
-          if (patientRef)
-            resource.subject.reference = patientRef
+          if patient_ref
+            resource.subject.reference = patient_ref
           end
         end
-        resource.code = minimal_codeableconcept(system,code, namespace)
+        resource.code = minimal_codeableconcept(system, code, namespace: namespace)
         resource.verificationStatus = 'confirmed'
         fix_condition(resource)
-        tag_metadata(resource)
+        tag_metadata(resource, namespace: namespace)
       end
 
-      def self.minimal_identifier(identifier='0', namespace = FHIR)
+      def self.minimal_identifier(identifier='0', namespace:)
         mid = namespace.const_get(:Identifier).new
         mid.use = 'official'
         mid.system = 'http://projectcrucible.org'
@@ -243,7 +243,7 @@ module Crucible
         mid
       end
 
-      def self.minimal_humanname(name='Name', namespace = FHIR)
+      def self.minimal_humanname(name='Name', namespace:)
         hn = namespace.const_get(:HumanName).new
         hn.use = 'official'
         hn.family = 'Crucible'
@@ -252,13 +252,13 @@ module Crucible
         hn
       end
 
-      def self.textonly_codeableconcept(text='text', namespace = FHIR)
+      def self.textonly_codeableconcept(text='text', namespace:)
         concept = namespace.const_get(:CodeableConcept).new
         concept.text = text
         concept
       end
 
-      def self.textonly_reference(text='Reference', namespace = FHIR)
+      def self.textonly_reference(text='Reference', namespace:)
         ref = namespace.const_get(:Reference).new
         ref.display = "#{text} #{SecureRandom.base64}"
         ref
@@ -268,9 +268,9 @@ module Crucible
       #   SNOMED  http://snomed.info/sct
       #   LOINC   http://loinc.org
       #   ICD-10  http://hl7.org/fhir/sid/icd-10
-      def self.minimal_codeableconcept(system='http://loinc.org',code='8302-2', namespace = FHIR)
+      def self.minimal_codeableconcept(system='http://loinc.org', code='8302-2', namespace:)
         concept = namespace.const_get(:CodeableConcept).new
-        concept.coding = [ minimal_coding(system,code,namespace) ]
+        concept.coding = [minimal_coding(system, code, namespace: namespace)]
         concept
       end
 
@@ -278,14 +278,14 @@ module Crucible
       #   SNOMED  http://snomed.info/sct
       #   LOINC   http://loinc.org
       #   ICD-10  http://hl7.org/fhir/sid/icd-10
-      def self.minimal_coding(system='http://loinc.org',code='8302-2',namespace = FHIR)
+      def self.minimal_coding(system='http://loinc.org', code='8302-2', namespace:)
         coding = namespace.const_get(:Coding).new
         coding.system = system
         coding.code = code
         coding
       end
 
-      def self.minimal_quantity(value=170,units='cm', namespace = FHIR)
+      def self.minimal_quantity(value=170, units='cm', namespace:)
         quantity = namespace.const_get(:Quantity).new
         quantity.value = value
         quantity.unit = units
@@ -293,38 +293,41 @@ module Crucible
         quantity
       end
 
-      def self.minimal_animal(namespace = FHIR)
+      def self.minimal_animal(namespace:)
         animal = namespace.const_get(:Patient).const_get(:Animal).new
-        animal.species = minimal_codeableconcept('http://hl7.org/fhir/animal-species','canislf', namespaec) # dog
-        animal.breed = minimal_codeableconcept('http://hl7.org/fhir/animal-breed','gret', namespaec) # golden retriever
-        animal.genderStatus = minimal_codeableconcept('http://hl7.org/fhir/animal-genderstatus','intact', namespaec) # intact
+        animal.species = minimal_codeableconcept('http://hl7.org/fhir/animal-species', 'canislf', namespace: namespace) # dog
+        animal.breed = minimal_codeableconcept('http://hl7.org/fhir/animal-breed', 'gret', namespace: namespace) # golden retriever
+        animal.genderStatus = minimal_codeableconcept('http://hl7.org/fhir/animal-genderstatus', 'intact', namespace: namespace) # intact
         animal
       end
 
-      def self.tag_metadata(resource, namespace = FHIR)
+      def self.tag_metadata(resource, namespace:)
         return nil unless resource
 
         if resource.meta.nil?
           resource.meta = namespace.const_get(:Meta).new({ 'tag' => [{'system'=>'http://projectcrucible.org', 'code'=>'testdata'}]})
         else
-          resource.meta.tag << @namespace.const_get(:Coding).new({'system'=>'http://projectcrucible.org', 'code'=>'testdata'})
+          resource.meta.tag << namespace.const_get(:Coding).new({'system'=>'http://projectcrucible.org', 'code'=>'testdata'})
         end
         resource
       end
 
       def self.fix_condition(resource)
-        if resource.is_a?(FHIR::Condition)
-          # They changed it from `code` data type to `CodeableConcept` in `R4`
-          if resource.clinicalStatus.kind_of? String
-            resource.clinicalStatus = minimal_codeableconcept(
-                'http://terminology.hl7.org/CodeSystem/condition-clinical',
-                resource.clinicalStatus)
-          end
-          if resource.verificationStatus.kind_of? String
-            resource.verificationStatus = minimal_codeableconcept(
-                'http://terminology.hl7.org/CodeSystem/condition-ver-status',
-                resource.verificationStatus)
-          end
+        version = Crucible::FHIRVersion.for_class(resource)
+        return resource unless [:r4, :r4b].include?(version)
+
+        namespace = Crucible::FHIRVersion.namespace(version)
+        if resource.clinicalStatus.kind_of? String
+          resource.clinicalStatus = minimal_codeableconcept(
+              'http://terminology.hl7.org/CodeSystem/condition-clinical',
+              resource.clinicalStatus,
+              namespace: namespace)
+        end
+        if resource.verificationStatus.kind_of? String
+          resource.verificationStatus = minimal_codeableconcept(
+              'http://terminology.hl7.org/CodeSystem/condition-ver-status',
+              resource.verificationStatus,
+              namespace: namespace)
         end
         resource
       end
@@ -349,10 +352,10 @@ module Crucible
           resource.unit = nil
           resource.comparator = nil
         when FHIR::Appointment
-          resource.reasonCode = [ minimal_codeableconcept('http://snomed.info/sct','219006') ] # drinker of alcohol
-          resource.participant.each{|p| p.type=[ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency') ] }
+          resource.reasonCode = [ minimal_codeableconcept('http://snomed.info/sct','219006', namespace: FHIR) ] # drinker of alcohol
+          resource.participant.each{|p| p.type=[ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency', namespace: FHIR) ] }
         when FHIR::AppointmentResponse
-          resource.participantType = [ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency') ]
+          resource.participantType = [ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency', namespace: FHIR) ]
         when FHIR::AuditEvent
           resource.entity.each do |o|
             o.query=nil
@@ -419,18 +422,18 @@ module Crucible
           end
         when FHIR::ClaimResponse
           resource.item.each do |item|
-            item.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit')}
+            item.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR)}
             item.detail.each do |detail|
-              detail.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit')}
+              detail.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR)}
               detail.subDetail.each do |sub|
-                sub.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit')}
+                sub.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR)}
               end
             end
           end
           resource.addItem.each do |addItem|
-            addItem.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit')}
+            addItem.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR)}
             addItem.detail.each do |detail|
-              detail.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit')}
+              detail.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR)}
             end
           end
         when FHIR::Communication
@@ -588,7 +591,7 @@ module Crucible
             code = nil
           end
           resource.outcomeReference.each do |reference|
-            reference = textonly_reference('Observation')
+            reference = textonly_reference('Observation', namespace: FHIR)
           end
           resource.target.each do |target|
             unless target.dueDuration.nil?
@@ -605,7 +608,7 @@ module Crucible
           availability = ['ONLINE', 'OFFLINE', 'NEARLINE', 'UNAVAILABLE']
           resource.series.each do |series|
             series.instance.each do |instance|
-              instance.sopClass = minimal_coding('urn:ietf:rfc:3986', random_oid)
+              instance.sopClass = minimal_coding('urn:ietf:rfc:3986', random_oid, namespace: FHIR)
             end
           end
         when FHIR::Immunization
@@ -643,25 +646,25 @@ module Crucible
           date = DateTime.now
           resource.effectiveDateTime = date.strftime("%Y-%m-%dT%T.%LZ")
           resource.effectivePeriod = nil
-          resource.medicationReference = textonly_reference('Medication')
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR)
           resource.medicationCodeableConcept = nil
           unless resource.dosage.nil?
             resource.dosage.dose.comparator = nil unless resource.dosage.dose.nil?
             resource.dosage.rateQuantity = nil
           end
         when FHIR::MedicationDispense
-          resource.medicationReference = textonly_reference('Medication')
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR)
           resource.medicationCodeableConcept = nil
           resource.dosageInstruction.each {|d|d.timing = nil }
           resource.quantity.comparator = nil unless resource.quantity.nil?
           resource.daysSupply.comparator = nil unless resource.daysSupply.nil?
         when FHIR::MedicationRequest
-          resource.medicationReference = textonly_reference('Medication')
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR)
           resource.medicationCodeableConcept = nil
           resource.dosageInstruction.each {|d|d.timing = nil }
           resource.dispenseRequest.quantity.comparator = nil if resource&.dispenseRequest&.quantity != nil
         when FHIR::MedicationStatement
-          resource.medicationReference = textonly_reference('Medication')
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR)
           resource.medicationCodeableConcept = nil
           resource.dosage.each{|d|d.timing=nil}
         when FHIR::MessageDefinition
@@ -719,7 +722,7 @@ module Crucible
             p.searchType = nil unless p.type == 'string'
           end
         when FHIR::Patient
-          resource.maritalStatus = minimal_codeableconcept('http://hl7.org/fhir/v3/MaritalStatus','S')
+          resource.maritalStatus = minimal_codeableconcept('http://hl7.org/fhir/v3/MaritalStatus','S', namespace: FHIR)
         when FHIR::PlanDefinition
           resource.action.each do |a|
             a.action.each do |b|
@@ -729,7 +732,7 @@ module Crucible
         when FHIR::Procedure
           resource.focalDevice.each do |fd|
             code = ['implanted', 'explanted', 'manipulated'].sample
-            fd.action = minimal_codeableconcept('http://hl7.org/fhir/device-action', code)
+            fd.action = minimal_codeableconcept('http://hl7.org/fhir/device-action', code, namespace: FHIR)
           end
         when FHIR::Provenance
           resource.entity.each do |e|
@@ -743,7 +746,7 @@ module Crucible
             end
           end
         when FHIR::RelatedPerson
-          resource.relationship = [minimal_codeableconcept('http://hl7.org/fhir/patient-contact-relationship','family')]
+          resource.relationship = [minimal_codeableconcept('http://hl7.org/fhir/patient-contact-relationship','family', namespace: FHIR)]
         when FHIR::Questionnaire
           # resource.item.each do |i|
           #   i.required = true
@@ -795,7 +798,7 @@ module Crucible
         when FHIR::SampledData
           resource.origin.comparator = nil unless resource.origin.nil?
         when FHIR::Signature
-          resource.type = [ minimal_coding('urn:iso-astm:E1762-95:2013','1.2.840.10065.1.12.1.18') ]
+          resource.type = [ minimal_coding('urn:iso-astm:E1762-95:2013','1.2.840.10065.1.12.1.18', namespace: FHIR) ]
           resource.targetFormat = nil
           resource.sigFormat = nil
         when FHIR::Specimen
@@ -815,10 +818,10 @@ module Crucible
             instance.quantity.comparator = nil unless instance.quantity.nil?
           end
         when FHIR::SupplyDelivery
-          resource.type = minimal_codeableconcept('http://hl7.org/fhir/supply-item-type','medication')
+          resource.type = minimal_codeableconcept('http://hl7.org/fhir/supply-item-type','medication', namespace: FHIR)
           resource.suppliedItem.quantity.comparator = nil if !resource.suppliedItem.nil? && !resource.suppliedItem.quantity.nil?
         when FHIR::SupplyRequest
-          resource.category = minimal_codeableconcept('http://hl7.org/fhir/supply-kind','central')
+          resource.category = minimal_codeableconcept('http://hl7.org/fhir/supply-kind','central', namespace: FHIR)
         when FHIR::StructureDefinition
           resource.derivation = 'constraint'
           resource.fhirVersion = '4.0.0'
@@ -999,10 +1002,10 @@ module Crucible
           resource.unit = nil
           resource.comparator = nil 
         when FHIR::STU3::Appointment
-          resource.reason = [ minimal_codeableconcept('http://snomed.info/sct','219006', FHIR::STU3) ] # drinker of alcohol
-          resource.participant.each{|p| p.type=[ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency', FHIR::STU3) ] }
+          resource.reason = [ minimal_codeableconcept('http://snomed.info/sct','219006', namespace: FHIR::STU3) ] # drinker of alcohol
+          resource.participant.each{|p| p.type=[ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency', namespace: FHIR::STU3) ] }
         when FHIR::STU3::AppointmentResponse
-          resource.participantType = [ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency', FHIR::STU3) ]
+          resource.participantType = [ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency', namespace: FHIR::STU3) ]
         when FHIR::STU3::AuditEvent
           resource.entity.each do |o|
             o.query=nil
@@ -1065,7 +1068,7 @@ module Crucible
           end
         when FHIR::STU3::Claim
           resource.item.each do |item|
-            item.category = minimal_codeableconcept('http://hl7.org/fhir/benefit-subcategory','35', FHIR::STU3)
+            item.category = minimal_codeableconcept('http://hl7.org/fhir/benefit-subcategory','35', namespace: FHIR::STU3)
             item.quantity.comparator = nil unless item.quantity.nil?
             item.detail.each do |detail|
               detail.category = item.category
@@ -1073,24 +1076,24 @@ module Crucible
               detail.subDetail.each do |sub|
                 sub.category = item.category
                 sub.quantity.comparator = nil unless sub.quantity.nil?
-                sub.service = minimal_codeableconcept('http://hl7.org/fhir/ex-USCLS','1205', FHIR::STU3)
+                sub.service = minimal_codeableconcept('http://hl7.org/fhir/ex-USCLS','1205', namespace: FHIR::STU3)
               end
             end
           end
         when FHIR::STU3::ClaimResponse
           resource.item.each do |item|
-            item.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', FHIR::STU3)}
+            item.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR::STU3)}
             item.detail.each do |detail|
-              detail.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', FHIR::STU3)}
+              detail.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR::STU3)}
               detail.subDetail.each do |sub|
-                sub.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', FHIR::STU3)}
+                sub.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR::STU3)}
               end
             end
           end
           resource.addItem.each do |addItem|
-            addItem.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', FHIR::STU3)}
+            addItem.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR::STU3)}
             addItem.detail.each do |detail|
-              detail.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', FHIR::STU3)}
+              detail.adjudication.each{|a|a.category = minimal_codeableconcept('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR::STU3)}
             end
           end
         when FHIR::STU3::Communication
@@ -1109,10 +1112,10 @@ module Crucible
           end
         when FHIR::STU3::ConceptMap
           if(resource.sourceUri.nil? && resource.sourceReference.nil?)
-            resource.sourceReference = textonly_reference('ValueSet', FHIR::STU3) 
+            resource.sourceReference = textonly_reference('ValueSet', namespace: FHIR::STU3)
           end
           if(resource.targetUri.nil? && resource.targetReference.nil?)
-            resource.targetReference = textonly_reference('ValueSet', FHIR::STU3) 
+            resource.targetReference = textonly_reference('ValueSet', namespace: FHIR::STU3)
           end
         when FHIR::STU3::Condition
           if resource.onsetAge
@@ -1147,7 +1150,7 @@ module Crucible
           resource.messaging.each{|m| m.endpoint = nil} if resource.kind != 'instance'
         when FHIR::STU3::Contract
           resource.agent.each do |agent|
-            agent.actor = textonly_reference('Patient', FHIR::STU3)
+            agent.actor = textonly_reference('Patient', namespace: FHIR::STU3)
           end
           resource.valuedItem.each do |item|
             if item.unitPrice
@@ -1166,11 +1169,11 @@ module Crucible
           end
           resource.term.each do |term|
             term.agent.each do |agent|
-              agent.actor = textonly_reference('Organization', FHIR::STU3)
+              agent.actor = textonly_reference('Organization', namespace: FHIR::STU3)
             end
             term.group.each do |group|
               group.agent.each do |agent|
-                agent.actor = textonly_reference('Organization', FHIR::STU3)
+                agent.actor = textonly_reference('Organization', namespace: FHIR::STU3)
               end
             end
             term.valuedItem.each do |item|
@@ -1191,15 +1194,15 @@ module Crucible
           end
           resource.friendly.each do |f|
             f.contentAttachment = nil
-            f.contentReference = textonly_reference('DocumentReference', FHIR::STU3)
+            f.contentReference = textonly_reference('DocumentReference', namespace: FHIR::STU3)
           end
           resource.legal.each do |f|
             f.contentAttachment = nil
-            f.contentReference = textonly_reference('DocumentReference', FHIR::STU3)
+            f.contentReference = textonly_reference('DocumentReference', namespace: FHIR::STU3)
           end
           resource.rule.each do |f|
             f.contentAttachment = nil
-            f.contentReference = textonly_reference('DocumentReference', FHIR::STU3)
+            f.contentReference = textonly_reference('DocumentReference', namespace: FHIR::STU3)
           end
         when FHIR::STU3::DataElement
           resource.element.each do |e|
@@ -1228,7 +1231,7 @@ module Crucible
         when FHIR::STU3::DocumentManifest
           resource.content.each do |c|
             c.pAttachment = nil
-            c.pReference = textonly_reference('Any', FHIR::STU3)
+            c.pReference = textonly_reference('Any', namespace: FHIR::STU3)
           end
         when FHIR::STU3::DocumentReference
           resource.docStatus = 'preliminary'
@@ -1322,7 +1325,7 @@ module Crucible
             code = nil
           end
           resource.outcomeReference.each do |reference|
-            reference = textonly_reference('Observation', FHIR::STU3)
+            reference = textonly_reference('Observation', namespace: FHIR::STU3)
           end
           if resource.target && resource.target.dueDuration
             resource.target.dueDuration.system = 'http://unitsofmeasure.org'
@@ -1363,14 +1366,14 @@ module Crucible
           resource.doseQuantity.comparator = nil unless resource.doseQuantity.nil?
           if resource.notGiven
             unless resource.explanation.nil?
-              resource.explanation.reasonNotGiven = [ textonly_codeableconcept("reasonNotGiven #{SecureRandom.base64}", FHIR::STU3) ]
+              resource.explanation.reasonNotGiven = [ textonly_codeableconcept("reasonNotGiven #{SecureRandom.base64}", namespace: FHIR::STU3) ]
               resource.explanation.reason = nil
             end
             resource.reaction = nil
           else
             unless resource.explanation.nil?
               resource.explanation.reasonNotGiven = nil
-              resource.explanation.reason = [ textonly_codeableconcept("reason #{SecureRandom.base64}", FHIR::STU3) ]
+              resource.explanation.reason = [ textonly_codeableconcept("reason #{SecureRandom.base64}", namespace: FHIR::STU3) ]
             end
           end
           resource.status = ['completed','entered-in-error'].sample
@@ -1379,7 +1382,7 @@ module Crucible
           resource.package.each do |package|
             package.resource.each do |r|
               r.sourceUri = nil
-              r.sourceReference = textonly_reference('Any', FHIR::STU3)
+              r.sourceReference = textonly_reference('Any', namespace: FHIR::STU3)
             end
           end
         when FHIR::STU3::Linkage
@@ -1423,26 +1426,26 @@ module Crucible
           else
             resource.reasonNotGiven = nil
           end
-          resource.medicationReference = textonly_reference('Medication', FHIR::STU3)
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR::STU3)
           resource.medicationCodeableConcept = nil
           unless resource.dosage.nil?
             resource.dosage.dose.comparator = nil unless resource.dosage.dose.nil?
             resource.dosage.rateQuantity = nil
           end
         when FHIR::STU3::MedicationDispense
-          resource.medicationReference = textonly_reference('Medication', FHIR::STU3)
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR::STU3)
           resource.medicationCodeableConcept = nil
           resource.dosageInstruction.each {|d|d.timing = nil }
           resource.quantity.comparator = nil unless resource.quantity.nil?
           resource.daysSupply.comparator = nil unless resource.daysSupply.nil?
         when FHIR::STU3::MedicationRequest
-          resource.medicationReference = textonly_reference('Medication', FHIR::STU3)
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR::STU3)
           resource.medicationCodeableConcept = nil
           resource.dosageInstruction.each {|d|d.timing = nil }
           resource.dispenseRequest.quantity.comparator = nil if resource&.dispenseRequest&.quantity != nil
         when FHIR::STU3::MedicationStatement
           resource.reasonNotTaken = nil unless resource.taken == 'n'
-          resource.medicationReference = textonly_reference('Medication', FHIR::STU3)
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR::STU3)
           resource.medicationCodeableConcept = nil
           resource.dosage.each{|d|d.timing=nil}
         when FHIR::STU3::MessageDefinition
@@ -1501,7 +1504,7 @@ module Crucible
             p.searchType = nil unless p.type == 'string'
           end
         when FHIR::STU3::Patient
-          resource.maritalStatus = minimal_codeableconcept('http://hl7.org/fhir/v3/MaritalStatus','S', FHIR::STU3)
+          resource.maritalStatus = minimal_codeableconcept('http://hl7.org/fhir/v3/MaritalStatus','S', namespace: FHIR::STU3)
         when FHIR::STU3::PlanDefinition
           resource.action.each do |a|
             a.action.each do |b|
@@ -1512,7 +1515,7 @@ module Crucible
           resource.notDoneReason = nil if resource.notDone != true
           resource.focalDevice.each do |fd|
             code = ['implanted', 'explanted', 'manipulated'].sample
-            fd.action = minimal_codeableconcept('http://hl7.org/fhir/device-action', code, FHIR::STU3)
+            fd.action = minimal_codeableconcept('http://hl7.org/fhir/device-action', code, namespace: FHIR::STU3)
           end
         when FHIR::STU3::Provenance
           resource.entity.each do |e|
@@ -1526,7 +1529,7 @@ module Crucible
             end
           end
         when FHIR::STU3::RelatedPerson
-          resource.relationship = minimal_codeableconcept('http://hl7.org/fhir/patient-contact-relationship','family', FHIR::STU3)
+          resource.relationship = minimal_codeableconcept('http://hl7.org/fhir/patient-contact-relationship','family', namespace: FHIR::STU3)
         when FHIR::STU3::Questionnaire
           resource.item.each do |i|
             i.required = true
@@ -1581,7 +1584,7 @@ module Crucible
         when FHIR::STU3::SampledData
           resource.origin.comparator = nil unless resource.origin.nil?
         when FHIR::STU3::Signature
-          resource.type = [ minimal_coding('urn:iso-astm:E1762-95:2013','1.2.840.10065.1.12.1.18', FHIR::STU3) ]
+          resource.type = [ minimal_coding('urn:iso-astm:E1762-95:2013','1.2.840.10065.1.12.1.18', namespace: FHIR::STU3) ]
           resource.whoUri = 'http://projectcrucible.org'
           resource.whoReference = nil
         when FHIR::STU3::Specimen
@@ -1601,10 +1604,10 @@ module Crucible
             instance.quantity.comparator = nil unless instance.quantity.nil?
           end
         when FHIR::STU3::SupplyDelivery
-          resource.type = minimal_codeableconcept('http://hl7.org/fhir/supply-item-type','medication', FHIR::STU3)
+          resource.type = minimal_codeableconcept('http://hl7.org/fhir/supply-item-type','medication', namespace: FHIR::STU3)
           resource.suppliedItem.quantity.comparator = nil if !resource.suppliedItem.nil? && !resource.suppliedItem.quantity.nil?
         when FHIR::STU3::SupplyRequest
-          resource.category = minimal_codeableconcept('http://hl7.org/fhir/supply-kind','central', FHIR::STU3)
+          resource.category = minimal_codeableconcept('http://hl7.org/fhir/supply-kind','central', namespace: FHIR::STU3)
         when FHIR::STU3::StructureDefinition
           resource.derivation = 'constraint'
           resource.fhirVersion = 'STU3'
@@ -1763,10 +1766,10 @@ module Crucible
 
         # DSTU2
         when FHIR::DSTU2::Appointment
-          resource.reason = nil # minimal_codeableconcept('http://snomed.info/sct','219006', FHIR::DSTU2) # drinker of alcohol
-          resource.participant.each{|p| p.type=[ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency', FHIR::DSTU2) ] }
+          resource.reason = nil # minimal_codeableconcept('http://snomed.info/sct','219006', namespace: FHIR::DSTU2) # drinker of alcohol
+          resource.participant.each{|p| p.type=[ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency', namespace: FHIR::DSTU2) ] }
         when FHIR::DSTU2::AppointmentResponse
-          resource.participantType = [ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency', FHIR::DSTU2) ]
+          resource.participantType = [ minimal_codeableconcept('http://hl7.org/fhir/participant-type','emergency', namespace: FHIR::DSTU2) ]
         when FHIR::DSTU2::AuditEvent
           resource.object.each do |o|
             o.query=nil
@@ -1806,35 +1809,35 @@ module Crucible
           end
         when FHIR::DSTU2::Claim
           resource.item.each do |item|
-            item.type = minimal_coding('http://hl7.org/fhir/v3/ActCode','OHSINV', FHIR::DSTU2)
+            item.type = minimal_coding('http://hl7.org/fhir/v3/ActCode','OHSINV', namespace: FHIR::DSTU2)
             item.quantity.comparator = nil unless item.quantity.nil?
             item.detail.each do |detail|
-              detail.type = minimal_coding('http://hl7.org/fhir/v3/ActCode','OHSINV', FHIR::DSTU2)
+              detail.type = minimal_coding('http://hl7.org/fhir/v3/ActCode','OHSINV', namespace: FHIR::DSTU2)
               detail.quantity.comparator = nil unless detail.quantity.nil?
               detail.subDetail.each do |sub|
-                sub.type = minimal_coding('http://hl7.org/fhir/v3/ActCode','OHSINV', FHIR::DSTU2)
-                sub.service = minimal_coding('http://hl7.org/fhir/ex-USCLS','1205', FHIR::DSTU2)
+                sub.type = minimal_coding('http://hl7.org/fhir/v3/ActCode','OHSINV', namespace: FHIR::DSTU2)
+                sub.service = minimal_coding('http://hl7.org/fhir/ex-USCLS','1205', namespace: FHIR::DSTU2)
                 sub.quantity.comparator = nil unless sub.quantity.nil?
               end
             end
           end
           resource.missingTeeth.each do |mt|
-            mt.tooth = minimal_coding('http://hl7.org/fhir/ex-fdi','42', FHIR::DSTU2)
+            mt.tooth = minimal_coding('http://hl7.org/fhir/ex-fdi','42', namespace: FHIR::DSTU2)
           end
         when FHIR::DSTU2::ClaimResponse
           resource.item.each do |item|
-            item.adjudication.each{|a|a.code = minimal_coding('http://hl7.org/fhir/adjudication','benefit', FHIR::DSTU2)}
+            item.adjudication.each{|a|a.code = minimal_coding('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR::DSTU2)}
             item.detail.each do |detail|
-              detail.adjudication.each{|a|a.code = minimal_coding('http://hl7.org/fhir/adjudication','benefit', FHIR::DSTU2)}
+              detail.adjudication.each{|a|a.code = minimal_coding('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR::DSTU2)}
               detail.subDetail.each do |sub|
-                sub.adjudication.each{|a|a.code = minimal_coding('http://hl7.org/fhir/adjudication','benefit', FHIR::DSTU2)}
+                sub.adjudication.each{|a|a.code = minimal_coding('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR::DSTU2)}
               end
             end
           end
           resource.addItem.each do |addItem|
-            addItem.adjudication.each{|a|a.code = minimal_coding('http://hl7.org/fhir/adjudication','benefit', FHIR::DSTU2)}
+            addItem.adjudication.each{|a|a.code = minimal_coding('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR::DSTU2)}
             addItem.detail.each do |detail|
-              detail.adjudication.each{|a|a.code = minimal_coding('http://hl7.org/fhir/adjudication','benefit', FHIR::DSTU2)}
+              detail.adjudication.each{|a|a.code = minimal_coding('http://hl7.org/fhir/adjudication','benefit', namespace: FHIR::DSTU2)}
             end
           end
         when FHIR::DSTU2::Communication
@@ -1852,10 +1855,10 @@ module Crucible
           end
         when FHIR::DSTU2::ConceptMap
           if(resource.sourceUri.nil? && resource.sourceReference.nil?)
-            resource.sourceReference = textonly_reference('ValueSet', FHIR::DSTU2) 
+            resource.sourceReference = textonly_reference('ValueSet', namespace: FHIR::DSTU2)
           end
           if(resource.targetUri.nil? && resource.targetReference.nil?)
-            resource.targetReference = textonly_reference('ValueSet', FHIR::DSTU2) 
+            resource.targetReference = textonly_reference('ValueSet', namespace: FHIR::DSTU2)
           end
         when FHIR::DSTU2::Conformance
           resource.fhirVersion = 'DSTU2'
@@ -1869,18 +1872,18 @@ module Crucible
           resource.messaging.each{|m| m.endpoint = nil} if resource.kind != 'instance'
         when FHIR::DSTU2::Contract
           resource.actor.each do |actor|
-            actor.entity = textonly_reference('Patient', FHIR::DSTU2)
+            actor.entity = textonly_reference('Patient', namespace: FHIR::DSTU2)
           end
           resource.valuedItem.each do |valuedItem|
             valuedItem.quantity.comparator = nil unless valuedItem.quantity.nil?
           end
           resource.term.each do |term|
             term.actor.each do |actor|
-              actor.entity = textonly_reference('Organization', FHIR::DSTU2)
+              actor.entity = textonly_reference('Organization', namespace: FHIR::DSTU2)
             end
             term.group.each do |group|
               group.actor.each do |actor|
-                actor.entity = textonly_reference('Organization', FHIR::DSTU2)
+                actor.entity = textonly_reference('Organization', namespace: FHIR::DSTU2)
               end
             end
             term.valuedItem.each do |valuedItem|
@@ -1889,15 +1892,15 @@ module Crucible
           end
           resource.friendly.each do |f|
             f.contentAttachment = nil
-            f.contentReference = textonly_reference('DocumentReference', FHIR::DSTU2)
+            f.contentReference = textonly_reference('DocumentReference', namespace: FHIR::DSTU2)
           end
           resource.legal.each do |f|
             f.contentAttachment = nil
-            f.contentReference = textonly_reference('DocumentReference', FHIR::DSTU2)
+            f.contentReference = textonly_reference('DocumentReference', namespace: FHIR::DSTU2)
           end
           resource.rule.each do |f|
             f.contentAttachment = nil
-            f.contentReference = textonly_reference('DocumentReference', FHIR::DSTU2)
+            f.contentReference = textonly_reference('DocumentReference', namespace: FHIR::DSTU2)
           end
         when FHIR::DSTU2::DataElement
           resource.mapping.each do |m|
@@ -1920,10 +1923,10 @@ module Crucible
         when FHIR::DSTU2::DocumentManifest
           resource.content.each do |c|
             c.pAttachment = nil
-            c.pReference = textonly_reference('Any', FHIR::DSTU2)
+            c.pReference = textonly_reference('Any', namespace: FHIR::DSTU2)
           end
         when FHIR::DSTU2::DocumentReference
-          resource.docStatus = minimal_codeableconcept('http://hl7.org/fhir/composition-status','preliminary', FHIR::DSTU2)
+          resource.docStatus = minimal_codeableconcept('http://hl7.org/fhir/composition-status','preliminary', namespace: FHIR::DSTU2)
         when FHIR::DSTU2::ElementDefinition
           keys = []
           resource.constraint.each do |constraint|
@@ -1947,7 +1950,7 @@ module Crucible
         when FHIR::DSTU2::Goal
           resource.outcome.each do |outcome|
             outcome.resultCodeableConcept = nil
-            outcome.resultReference = textonly_reference('Observation', FHIR::DSTU2)
+            outcome.resultReference = textonly_reference('Observation', namespace: FHIR::DSTU2)
           end
         when FHIR::DSTU2::Group
           resource.member = [] if resource.actual==false
@@ -1972,7 +1975,7 @@ module Crucible
           # resource.uid = random_oid
           # index = SecureRandom.random_number(FHIR::DSTU2::ImagingObjectSelection::VALID_CODES[:title].length)
           # code = FHIR::DSTU2::ImagingObjectSelection::VALID_CODES[:title][index]
-          # resource.title = minimal_codeableconcept('http://nema.org/dicom/dicm',code, FHIR::DSTU2)
+          # resource.title = minimal_codeableconcept('http://nema.org/dicom/dicm',code, namespace: FHIR::DSTU2)
           # resource.study.each do |study|
           #   study.uid = random_oid
           #   study.series.each do |series|
@@ -1995,13 +1998,13 @@ module Crucible
         when FHIR::DSTU2::Immunization
           if resource.wasNotGiven
             resource.explanation = FHIR::DSTU2::Immunization::Explanation.new unless resource.explanation
-            resource.explanation.reasonNotGiven = [ textonly_codeableconcept("reasonNotGiven #{SecureRandom.base64}", FHIR::DSTU2) ]
+            resource.explanation.reasonNotGiven = [ textonly_codeableconcept("reasonNotGiven #{SecureRandom.base64}", namespace: FHIR::DSTU2) ]
             resource.explanation.reason = nil
             resource.reaction = nil
           else
             resource.explanation = FHIR::DSTU2::Immunization::Explanation.new unless resource.explanation
             resource.explanation.reasonNotGiven = nil
-            resource.explanation.reason = [ textonly_codeableconcept("reason #{SecureRandom.base64}", FHIR::DSTU2) ]
+            resource.explanation.reason = [ textonly_codeableconcept("reason #{SecureRandom.base64}", namespace: FHIR::DSTU2) ]
           end
           resource.doseQuantity.comparator = nil unless resource.doseQuantity.nil?
         when FHIR::DSTU2::ImplementationGuide
@@ -2009,7 +2012,7 @@ module Crucible
           resource.package.each do |package|
             package.resource.each do |r|
               r.sourceUri = nil
-              r.sourceReference = textonly_reference('Any', FHIR::DSTU2)
+              r.sourceReference = textonly_reference('Any', namespace: FHIR::DSTU2)
             end
           end
         when FHIR::DSTU2::List
@@ -2045,20 +2048,20 @@ module Crucible
           else
             resource.reasonNotGiven = nil
           end
-          resource.medicationReference = textonly_reference('Medication', FHIR::DSTU2)
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR::DSTU2)
           resource.medicationCodeableConcept = nil
           resource.dosage.quantity.comparator = nil if !resource&.dosage&.quantity.nil?
         when FHIR::DSTU2::MedicationDispense
-          resource.medicationReference = textonly_reference('Medication', FHIR::DSTU2)
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR::DSTU2)
           resource.medicationCodeableConcept = nil
           resource.dosageInstruction.each {|d|d.timing = nil }
         when FHIR::DSTU2::MedicationOrder
-          resource.medicationReference = textonly_reference('Medication', FHIR::DSTU2)
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR::DSTU2)
           resource.medicationCodeableConcept = nil
           resource.dosageInstruction.each {|d|d.timing = nil }
         when FHIR::DSTU2::MedicationStatement
           resource.reasonNotTaken = nil if resource.wasNotTaken != true
-          resource.medicationReference = textonly_reference('Medication', FHIR::DSTU2)
+          resource.medicationReference = textonly_reference('Medication', namespace: FHIR::DSTU2)
           resource.medicationCodeableConcept = nil
           resource.dosage.each do |d|
             d.timing=nil
@@ -2105,7 +2108,7 @@ module Crucible
         when FHIR::DSTU2::Order
           resource.when.schedule = nil
         when FHIR::DSTU2::Patient
-          resource.maritalStatus = minimal_codeableconcept('http://hl7.org/fhir/v3/MaritalStatus','S', FHIR::DSTU2)
+          resource.maritalStatus = minimal_codeableconcept('http://hl7.org/fhir/v3/MaritalStatus','S', namespace: FHIR::DSTU2)
           resource.communication.each do |communication|
             communication.language.coding.each do |c|
               c.system = 'http://tools.ietf.org/html/bcp47'
@@ -2115,7 +2118,7 @@ module Crucible
         when FHIR::DSTU2::Procedure
           resource.reasonNotPerformed = nil if resource.notPerformed != true
           resource.focalDevice.each do |fd|
-            fd.action = minimal_codeableconcept('http://hl7.org/fhir/ValueSet/device-action','implanted', FHIR::DSTU2)
+            fd.action = minimal_codeableconcept('http://hl7.org/fhir/ValueSet/device-action','implanted', namespace: FHIR::DSTU2)
           end
         when FHIR::DSTU2::Provenance
           resource.entity.each do |e|
@@ -2129,7 +2132,7 @@ module Crucible
             end
           end
         when FHIR::DSTU2::RelatedPerson
-          resource.relationship = minimal_codeableconcept('http://hl7.org/fhir/patient-contact-relationship','family', FHIR::DSTU2)
+          resource.relationship = minimal_codeableconcept('http://hl7.org/fhir/patient-contact-relationship','family', namespace: FHIR::DSTU2)
         when FHIR::DSTU2::Questionnaire
           resource.group.required = true
           resource.group.group = nil
@@ -2142,13 +2145,13 @@ module Crucible
           resource.channel.payload = 'applicaton/json+fhir'
           resource.end = nil
         when FHIR::DSTU2::SupplyDelivery
-          resource.type = minimal_codeableconcept('http://hl7.org/fhir/supply-item-type','medication', FHIR::DSTU2)
+          resource.type = minimal_codeableconcept('http://hl7.org/fhir/supply-item-type','medication', namespace: FHIR::DSTU2)
           resource.quantity.comparator = nil unless resource.quantity.nil?
         when FHIR::DSTU2::SupplyRequest
-          resource.kind = minimal_codeableconcept('http://hl7.org/fhir/supply-kind','central', FHIR::DSTU2)
+          resource.kind = minimal_codeableconcept('http://hl7.org/fhir/supply-kind','central', namespace: FHIR::DSTU2)
           if resource.when 
             resource.when.schedule = nil
-            resource.when.code = minimal_codeableconcept('http://snomed.info/sct','20050000', FHIR::DSTU2) #biweekly
+            resource.when.code = minimal_codeableconcept('http://snomed.info/sct','20050000', namespace: FHIR::DSTU2) #biweekly
           end
         when FHIR::DSTU2::StructureDefinition
           resource.fhirVersion = 'DSTU2'

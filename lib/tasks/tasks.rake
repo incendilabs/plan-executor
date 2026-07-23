@@ -36,8 +36,7 @@ namespace :crucible do
     require 'benchmark'
     result = {}
     b = Benchmark.measure {
-      client = FHIR::Client.new(args.url)
-      client.use_fhir_version(fhir_version)
+      client = FHIR::Client.new(args.url, fhir_version: fhir_version)
       client.setup_security
       result = execute_all(args.url, client, args.output)
     }
@@ -47,11 +46,12 @@ namespace :crucible do
   end
 
   desc 'execute all test scripts'
-  task :execute_all_testscripts, [:url, :output] do |t, args|
+  task :execute_all_testscripts, [:url, :fhir_version, :output] do |t, args|
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
+    fhir_version = resolve_testscript_fhir_version(args.fhir_version)
     require 'benchmark'
     b = Benchmark.measure {
-      client = FHIR::Client.new(args.url)
+      client = FHIR::Client.new(args.url, fhir_version: fhir_version)
       client.setup_security
       results = Crucible::Tests::TestScriptEngine.new(client).execute_all
       process_results(results, args.url, args.output)
@@ -60,11 +60,12 @@ namespace :crucible do
   end
 
   desc 'execute testscript and get testreport'
-  task :testreport, [:url, :test, :filename] do |t, args|
+  task :testreport, [:url, :fhir_version, :test, :filename] do |t, args|
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
+    fhir_version = resolve_testscript_fhir_version(args.fhir_version)
     require 'benchmark'
     b = Benchmark.measure {
-      client = FHIR::Client.new(args.url)
+      client = FHIR::Client.new(args.url, fhir_version: fhir_version)
       client.setup_security
       engine = Crucible::Tests::TestScriptEngine.new(client)
       script = engine.find_test(args.test)
@@ -90,8 +91,7 @@ namespace :crucible do
     require 'benchmark'
     result = {}
     b = Benchmark.measure {
-      client = FHIR::Client.new(args.url)
-      client.use_fhir_version(fhir_version)
+      client = FHIR::Client.new(args.url, fhir_version: fhir_version)
       client.setup_security
       result = execute_test(args.url, client, args.test, args.resource, args.output)
     }
@@ -145,6 +145,14 @@ namespace :crucible do
 
   def resolve_fhir_version(version_string)
     Crucible::FHIRVersion.resolve(version_string)
+  end
+
+  def resolve_testscript_fhir_version(version_string)
+    version = resolve_fhir_version(version_string)
+    return version if version == :stu3
+
+    raise Crucible::FHIRVersion::UnsupportedVersionError,
+          "FHIR TestScripts require STU3, got #{version}"
   end
 
   def execute_test(url, client, key, resourceType=nil, output=nil)
@@ -347,8 +355,7 @@ namespace :crucible do
       puts "## #{url}"
       puts "```"
       b = Benchmark.measure {
-        client = FHIR::Client.new(url)
-        client.use_fhir_version(fhir_version)
+        client = FHIR::Client.new(url, fhir_version: fhir_version)
         client.setup_security
         execute_test(url, client, args.test, args.resource_type, args.output)
       }
@@ -374,8 +381,7 @@ namespace :crucible do
       puts "## #{url}"
       puts "```"
       b = Benchmark.measure {
-        client = FHIR::Client.new(url)
-        client.use_fhir_version(fhir_version)
+        client = FHIR::Client.new(url, fhir_version: fhir_version)
         client.setup_security
         results = execute_all(url, client, output)
       }
@@ -450,8 +456,7 @@ namespace :crucible do
       end
     end
 
-    client = FHIR::Client.new(args.url)
-    client.use_fhir_version(fhir_version)
+    client = FHIR::Client.new(args.url, fhir_version: fhir_version)
     client.setup_security
     client.monitor_requirements
     test = args.test.to_sym

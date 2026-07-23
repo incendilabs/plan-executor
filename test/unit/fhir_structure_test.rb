@@ -31,7 +31,7 @@ class FHIRStructureTest < Test::Unit::TestCase
     end
   end
 
-  def fhir_resources(fhir_version=nil)
+  def fhir_resources(fhir_version)
     Crucible::FHIRVersion.namespace(fhir_version).const_get(:RESOURCES)
   end
 

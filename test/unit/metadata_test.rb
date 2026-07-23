@@ -40,4 +40,10 @@ class MetadataTest < Test::Unit::TestCase
     assert !keyed_test.nil?, "Failed to find testscript by key"
   end
 
+  def test_testscripts_are_not_loaded_for_non_stu3_clients
+    client = FHIR::Client.new('http://r4b', fhir_version: :r4b)
+
+    assert_empty Crucible::Tests::TestScriptEngine.new(client).tests
+  end
+
 end

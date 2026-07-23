@@ -4,6 +4,8 @@ Plan Executor runs test suites against a FHIR server. The harness recognizes
 `DSTU2`, `STU3`, `R4`, and `R4B` versions of FHIR. Each suite declares its
 supported versions explicitly; recognizing a version does not make every suite
 compatible with it.
+Commands that execute suites require this version argument; omission is an
+error and does not select R4 implicitly.
 Tests can either be written in [Ruby](https://github.com/fhir-crucible/plan_executor#adding-a-new-test-suite),
 or using the [TestScript Resource](https://github.com/fhir-crucible/plan_executor/wiki/Using-Plan-Executor-with-TestScripts#testscript).
 TestScript execution remains STU3-only.

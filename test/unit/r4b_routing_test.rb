@@ -2,8 +2,7 @@ require_relative '../test_helper'
 
 class R4BRoutingTest < Test::Unit::TestCase
   def setup
-    @client = FHIR::Client.new('http://r4b')
-    @client.use_fhir_version(:r4b)
+    @client = FHIR::Client.new('http://r4b', fhir_version: :r4b)
     @suite = Crucible::Tests::BaseSuite.new(@client)
   end
 
@@ -43,6 +42,54 @@ class R4BRoutingTest < Test::Unit::TestCase
 
     assert_instance_of FHIR::R4B::Patient, patient
     assert_instance_of FHIR::R4B::Meta, patient.meta
+  end
+
+  def test_minimal_resource_helpers_require_an_explicit_namespace
+    assert_raise(ArgumentError) do
+      Crucible::Tests::ResourceGenerator.minimal_patient
+    end
+  end
+
+  def test_minimal_patient_keeps_all_children_in_r4b_namespace
+    patient = Crucible::Tests::ResourceGenerator.minimal_patient(namespace: FHIR::R4B)
+
+    assert_instance_of FHIR::R4B::Patient, patient
+    assert_instance_of FHIR::R4B::Identifier, patient.identifier.first
+    assert_instance_of FHIR::R4B::HumanName, patient.name.first
+    assert_instance_of FHIR::R4B::Meta, patient.meta
+    assert_instance_of FHIR::R4B::Coding, patient.meta.tag.first
+  end
+
+  def test_minimal_condition_uses_r4b_status_datatype
+    condition = Crucible::Tests::ResourceGenerator.minimal_condition(namespace: FHIR::R4B)
+
+    assert_instance_of FHIR::R4B::Condition, condition
+    assert_instance_of FHIR::R4B::CodeableConcept, condition.verificationStatus
+    assert_instance_of FHIR::R4B::Coding, condition.verificationStatus.coding.first
+    assert_equal 'confirmed', condition.verificationStatus.coding.first.code
+  end
+
+  def test_condition_status_conversion_preserves_each_version_namespace
+    r4_condition = FHIR::Condition.new
+    r4_condition.clinicalStatus = 'active'
+    r4_condition.verificationStatus = 'confirmed'
+    r4b_condition = FHIR::R4B::Condition.new
+    r4b_condition.clinicalStatus = 'active'
+    r4b_condition.verificationStatus = 'confirmed'
+    stu3_condition = FHIR::STU3::Condition.new
+    stu3_condition.clinicalStatus = 'active'
+    stu3_condition.verificationStatus = 'confirmed'
+
+    Crucible::Tests::ResourceGenerator.fix_condition(r4_condition)
+    Crucible::Tests::ResourceGenerator.fix_condition(r4b_condition)
+    Crucible::Tests::ResourceGenerator.fix_condition(stu3_condition)
+
+    assert_instance_of FHIR::CodeableConcept, r4_condition.clinicalStatus
+    assert_instance_of FHIR::CodeableConcept, r4_condition.verificationStatus
+    assert_instance_of FHIR::R4B::CodeableConcept, r4b_condition.clinicalStatus
+    assert_instance_of FHIR::R4B::CodeableConcept, r4b_condition.verificationStatus
+    assert_equal 'active', stu3_condition.clinicalStatus
+    assert_equal 'confirmed', stu3_condition.verificationStatus
   end
 
   def test_resource_fixture_helper_uses_r4b_namespace

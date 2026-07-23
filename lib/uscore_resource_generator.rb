@@ -6,7 +6,7 @@ module Crucible
       # If we add another version, we may need to update these
 
       def self.patient(identifier='0',name='Name')
-        resource = minimal_patient(identifier,name)
+        resource = minimal_patient(identifier, name, namespace: FHIR)
         # resource.identifier = [ minimal_identifier(identifier) ]
         # resource.name = [ minimal_humanname(name) ]
         resource.meta.profile = ['http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient']
@@ -17,7 +17,7 @@ module Crucible
         resource.birthDate = DateTime.now.strftime("%Y-%m-%d")
         resource.deceasedBoolean = false
         resource.address = [ address ]
-        resource.maritalStatus = minimal_codeableconcept('http://hl7.org/fhir/v3/MaritalStatus','S')
+        resource.maritalStatus = minimal_codeableconcept('http://hl7.org/fhir/v3/MaritalStatus', 'S', namespace: FHIR)
         resource.multipleBirthBoolean = false
         resource.contact = [ patient_contact ]
         resource.communication = [ patient_communication ]
@@ -26,8 +26,8 @@ module Crucible
         resource.managingOrganization = FHIR::Reference.new # reference to US Core-Organization
         resource.managingOrganization.display = 'US Core Organization'
         resource.extension = []
-        resource.extension << make_extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race','CodeableConcept',minimal_codeableconcept('http://hl7.org/fhir/v3/Race','2106-3'))
-        resource.extension << make_extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity','CodeableConcept',minimal_codeableconcept('http://hl7.org/fhir/v3/Ethnicity','2186-5'))
+        resource.extension << make_extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race','CodeableConcept',minimal_codeableconcept('http://hl7.org/fhir/v3/Race', '2106-3', namespace: FHIR))
+        resource.extension << make_extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity','CodeableConcept',minimal_codeableconcept('http://hl7.org/fhir/v3/Ethnicity', '2186-5', namespace: FHIR))
         resource.extension << make_extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName','String','Liberty')
         resource.extension << make_extension('http://hl7.org/fhir/StructureDefinition/birthPlace','Address',address)
         resource
@@ -70,8 +70,11 @@ module Crucible
 
       def self.patient_contact
         resource = FHIR::Patient::Contact.new
-        resource.relationship = [ minimal_codeableconcept('http://hl7.org/fhir/patient-contact-relationship','parent'), minimal_codeableconcept('http://hl7.org/fhir/patient-contact-relationship','emergency') ]
-        resource.name = minimal_humanname('Mom')
+        resource.relationship = [
+          minimal_codeableconcept('http://hl7.org/fhir/patient-contact-relationship', 'parent', namespace: FHIR),
+          minimal_codeableconcept('http://hl7.org/fhir/patient-contact-relationship', 'emergency', namespace: FHIR)
+        ]
+        resource.name = minimal_humanname('Mom', namespace: FHIR)
         resource.telecom = [ contact_point ]
         resource.address = address
         resource
@@ -79,7 +82,7 @@ module Crucible
 
       def self.patient_communication
         resource = FHIR::Patient::Communication.new
-        resource.language = minimal_codeableconcept('http://tools.ietf.org/html/bcp47','en-US')
+        resource.language = minimal_codeableconcept('http://tools.ietf.org/html/bcp47', 'en-US', namespace: FHIR)
         resource
       end
 
