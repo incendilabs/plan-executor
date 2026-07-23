@@ -16,7 +16,7 @@ module Crucible
 
       def initialize(client1, client2=nil)
         super(client1, client2)
-        @supported_versions = [:dstu2, :stu3, :r4]
+        @supported_versions = [:dstu2, :stu3, :r4, :r4b]
         if fhir_version == :dstu2
           @xml_format = FHIR::Formats::ResourceFormat::RESOURCE_XML_DSTU2
           @json_format = FHIR::Formats::ResourceFormat::RESOURCE_JSON_DSTU2

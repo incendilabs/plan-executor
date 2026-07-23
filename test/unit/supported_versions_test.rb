@@ -18,9 +18,10 @@ class SupportedVersionsTest < Test::Unit::TestCase
     assert_equal expected, Crucible::Tests::SearchTest.new(nil).supported_versions
   end
 
-  def test_no_suite_implicitly_advertises_r4b
+  def test_only_audited_suites_advertise_r4b
     suites = Crucible::Tests::SuiteEngine.new.tests
+    r4b_suites = suites.select { |suite| suite.supported_versions.include?(:r4b) }
 
-    assert_true suites.none? { |suite| suite.supported_versions.include?(:r4b) }
+    assert_equal [Crucible::Tests::FormatTest], r4b_suites.map(&:class)
   end
 end
