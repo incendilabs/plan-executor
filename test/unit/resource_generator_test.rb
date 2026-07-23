@@ -75,6 +75,40 @@ class ResourceGeneratorTest < Test::Unit::TestCase
     assert_empty FHIR::R4B::Xml.validate(resource.to_xml).map(&:message)
   end
 
+  def test_r4b_questionnaire_selectable_codes_exclude_abstract_question
+    metadata = FHIR::R4B::Questionnaire::Item::METADATA['type']
+    generated_codes = Crucible::Tests::ResourceGenerator.selectable_valid_codes(metadata, 'FHIR::R4B')
+
+    assert_include metadata['valid_codes']['http://hl7.org/fhir/item-type'], 'question'
+    assert_not_include generated_codes['http://hl7.org/fhir/item-type'], 'question'
+    assert_include generated_codes['http://hl7.org/fhir/item-type'], 'string'
+  end
+
+  def test_selectable_code_cache_preserves_each_fields_metadata_subset
+    generator = Crucible::Tests::ResourceGenerator
+    generator.remove_instance_variable(:@selectable_expansion_codes_cache) if generator.instance_variable_defined?(:@selectable_expansion_codes_cache)
+    metadata = FHIR::R4B::Questionnaire::Item::METADATA['type']
+    generator.selectable_valid_codes(metadata, 'FHIR::R4B')
+    subset_metadata = metadata.deep_dup
+    subset_metadata['valid_codes'] = { 'http://hl7.org/fhir/item-type' => ['string'] }
+
+    generated_codes = generator.selectable_valid_codes(subset_metadata, 'FHIR::R4B')
+
+    assert_equal({ 'http://hl7.org/fhir/item-type' => ['string'] }, generated_codes)
+  end
+
+  def test_generated_r4b_questionnaire_items_use_selectable_types
+    resource = Crucible::Tests::ResourceGenerator.generate(FHIR::R4B::Questionnaire, 5)
+    items = questionnaire_items(resource.item)
+    selectable_types = Crucible::Tests::ResourceGenerator.selectable_valid_codes(
+      FHIR::R4B::Questionnaire::Item::METADATA['type'],
+      'FHIR::R4B'
+    ).values.flatten
+
+    assert_not_empty items
+    assert_true items.all? { |item| selectable_types.include?(item.type) }
+  end
+
   def run_generator(resource_type, version, max_depth)
 
     klass_namespace = "FHIR"
@@ -104,6 +138,10 @@ class ResourceGeneratorTest < Test::Unit::TestCase
     return true unless resource.class.name.start_with?("FHIR")
     return false unless resource.class.name.start_with?(namespace)
     return resource.instance_values.values.all? { |v| check_valid_namespaces(v, namespace) }
+  end
+
+  def questionnaire_items(items)
+    items.to_a.flat_map { |item| [item] + questionnaire_items(item.item) }
   end
 
   def test_valid_oid_generator

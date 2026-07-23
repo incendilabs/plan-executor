@@ -63,7 +63,7 @@ module Crucible
             gen = SecureRandom.uuid
           elsif type == 'code'
             if meta['valid_codes']
-              gen = meta['valid_codes'].values.first.sample
+              gen = selectable_valid_codes(meta, namespace).values.flatten.sample
             elsif meta['binding'] && ['http://tools.ietf.org/html/bcp47','http://hl7.org/fhir/ValueSet/languages'].include?(meta['binding']['uri'])
               gen = 'en-US'
             elsif meta['binding'] && ['http://www.rfc-editor.org/bcp/bcp13.txt','http://hl7.org/fhir/ValueSet/content-type'].include?(meta['binding']['uri'])
@@ -108,9 +108,10 @@ module Crucible
               gen = generate_child(type, namespace, embedded-1)
               # apply bindings
               if type == 'CodeableConcept' && meta['valid_codes'] && meta['binding']
+                valid_codes = selectable_valid_codes(meta, namespace)
                 gen.coding.each do |c|
-                  c.system = meta['valid_codes'].keys.sample
-                  c.code = meta['valid_codes'][c.system].sample
+                  c.system = valid_codes.keys.sample
+                  c.code = valid_codes[c.system].sample
                   display = "#{namespace}::Definitions".constantize.get_display(c.system, c.code) if "#{namespace}::Definitions".constantize.respond_to?('get_display')
                   c.display = display ? display : nil
                 end
@@ -122,8 +123,9 @@ module Crucible
               elsif type == 'CodeableConcept' && meta['binding'] && meta['binding']['strength'] == 'required' && !meta['valid_codes'] && meta['min'] == 0
                 gen = nil # Cannot generate valid code for external required binding (e.g. LOINC/SNOMED); field is optional so safe to skip
               elsif type == 'Coding' && meta['valid_codes'] && meta['binding']
-                gen.system = meta['valid_codes'].keys.sample
-                gen.code = meta['valid_codes'][gen.system].sample
+                valid_codes = selectable_valid_codes(meta, namespace)
+                gen.system = valid_codes.keys.sample
+                gen.code = valid_codes[gen.system].sample
                 display = "#{namespace}::Definitions".constantize.get_display(gen.system, gen.code) if "#{namespace}::Definitions".constantize.respond_to?('get_display')
                 gen.display = display ? display : nil
               elsif type == 'Reference'
@@ -157,6 +159,49 @@ module Crucible
           resource.method("#{method}=").call(gen) if !gen.nil?
         end
         resource
+      end
+
+      def self.selectable_valid_codes(meta, namespace)
+        valid_codes = meta['valid_codes']
+        binding_uri = meta.dig('binding', 'uri')
+        return valid_codes unless binding_uri
+
+        definitions = "#{namespace}::Definitions".constantize
+        return valid_codes unless definitions.respond_to?(:expansions)
+
+        @selectable_expansion_codes_cache ||= {}
+        normalized_uri = binding_uri.sub(/\|[A-Za-z0-9.\-]+\z/, '')
+        cache_key = [namespace, normalized_uri]
+        selectable_codes = @selectable_expansion_codes_cache[cache_key]
+        unless @selectable_expansion_codes_cache.key?(cache_key)
+          value_set = definitions.expansions.find { |resource| resource['url'] == normalized_uri }
+          selectable_codes = if value_set
+                               collect_selectable_expansion_codes(
+                                 value_set.dig('expansion', 'contains'),
+                                 {}
+                               )
+                             end
+          @selectable_expansion_codes_cache[cache_key] = selectable_codes
+        end
+        return valid_codes unless selectable_codes
+
+        filtered_codes = valid_codes.each_with_object({}) do |(system, codes), filtered|
+          selectable = codes & selectable_codes.fetch(system, [])
+          filtered[system] = selectable unless selectable.empty?
+        end
+
+        filtered_codes.empty? ? valid_codes : filtered_codes
+      end
+
+      def self.collect_selectable_expansion_codes(entries, codes, inherited_system = nil)
+        entries.to_a.each do |entry|
+          system = entry['system'] || inherited_system
+          if system && entry['code'] && entry['abstract'] != true && entry['inactive'] != true
+            (codes[system] ||= []) << entry['code']
+          end
+          collect_selectable_expansion_codes(entry['contains'], codes, system)
+        end
+        codes
       end
 
       def self.ancestor_fhir_classes(klass,namespace)
