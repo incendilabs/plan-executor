@@ -14,7 +14,7 @@ module Crucible
         super(client1, client2)
         @tags.append('incendilabs')
         @category = { id: 'incendilabs', title: 'Incendilabs' }
-        @supported_versions = [:stu3, :r4]
+        @supported_versions = [:stu3, :r4, :r4b]
       end
 
       def setup
