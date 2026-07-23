@@ -312,6 +312,16 @@ module Crucible
         resource
       end
 
+      def self.fix_codeable_reference(resource)
+        namespace = Crucible::FHIRVersion.namespace(Crucible::FHIRVersion.for_class(resource))
+        return resource unless namespace.const_defined?(:CodeableReference, false)
+        return resource unless resource.is_a?(namespace.const_get(:CodeableReference))
+        return resource if resource.concept || resource.reference
+
+        resource.concept = textonly_codeableconcept('Generated CodeableReference', namespace: namespace)
+        resource
+      end
+
       def self.fix_condition(resource)
         version = Crucible::FHIRVersion.for_class(resource)
         return resource unless [:r4, :r4b].include?(version)
@@ -333,6 +343,8 @@ module Crucible
       end
 
       def self.apply_invariants!(resource)
+        fix_codeable_reference(resource)
+
         case resource
         when FHIR::ActivityDefinition
           resource.quantity.comparator = nil unless resource.quantity.nil?
