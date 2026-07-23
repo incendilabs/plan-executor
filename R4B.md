@@ -32,8 +32,9 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
   routing, a generated R4B structure index, corrected version-specific fixture
   lookup, and explicit suite compatibility annotations. These changes are split
   across commits `17537c9a`, `2e7a759`, `d70c01c`, `12e10e8`, and `a2b1482`.
-- No executable suite currently declares R4B compatibility. Suites must be
-  audited individually before `:r4b` is added to their annotations.
+- `FormatTest` is the first executable suite audited for R4B compatibility.
+  All remaining suites must still be audited individually before `:r4b` is
+  added to their annotations.
 - Remaining integration work consists of publishing or pinning compatible
   `fhir_models` and `fhir_client` revisions, updating dependency resolution,
   auditing candidate suites, and running endpoint smoke tests and the final
@@ -157,7 +158,8 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
 - Audit every suite and add `:r4b` only after its behavior, resources, fixtures, and assertions have been checked against R4B.
 - All executable suites now have explicit annotations. Seven suites that
   previously relied on the base default explicitly preserve their existing
-  `[:dstu2, :stu3, :r4]` compatibility; none implicitly gained R4B support.
+  compatibility; `FormatTest` gained R4B only after its focused and endpoint
+  audits. No suite gains R4B support implicitly.
 - Update resource-based suite enumeration so it intersects known versions, the suite's declared `supported_versions`, and resources available in that version. It must not overwrite a suite's declared compatibility.
 - Ensure suite listing and suite execution use the same compatibility decision.
 - Keep TestScripts STU3-only unless separate R4B TestScripts and an R4B TestScript parser are deliberately added.
@@ -231,7 +233,13 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
 - An omitted CLI version still selects R4; an unknown supplied version exits with a clear error.
 - `FHIR_structure_r4b.json` passes resource-list consistency and duplicate-name checks.
 - Version-specific fixture override selection has focused unit coverage.
-- At least one read, search, JSON, and XML smoke path runs against an R4B endpoint.
+- `FormatTest` passes all 22 cases against a Spark endpoint whose
+  CapabilityStatement reports FHIR `4.3.0` and both `xml` and `json`. The audit
+  used `sparkfhir/spark:r4b-latest` image
+  `sha256:720309c969f8562f418948197b794cc01cc07e5be2d7a82873562a8714719e82`
+  and `sparkfhir/mongo:r4b-latest` image
+  `sha256:10a44ee9fa2c6a42325656b1758b3fb14be00dfe84a6d999e1b9b3d695fc29d5`.
+  This covers Patient read, search Bundle, JSON, XML, and format negotiation.
 - Existing R4, STU3, and DSTU2 tests remain unchanged in behavior and pass their regression matrix.
 
 ## Recommended Implementation Order
@@ -241,7 +249,8 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
 3. Complete: generate and validate the R4B model set.
 4. Complete: add R4B routing, parsing, capability handling, and detection to `fhir_client`.
 5. Complete: add the central version registry and fail-fast version resolution to `plan-executor`.
-6. Pending: audit suites and add explicit R4B compatibility annotations only where verified.
-7. In progress: R4B structures and documentation are complete; R4B fixtures,
-   endpoint smoke tests, dependency updates, and the full regression matrix
-   remain.
+6. In progress: `FormatTest` is audited and enabled; audit additional suites
+   and add explicit R4B compatibility annotations only where verified.
+7. In progress: R4B structures, documentation, and the first endpoint smoke
+   run are complete; additional R4B fixtures, dependency updates, and the full
+   cross-version endpoint regression matrix remain.
