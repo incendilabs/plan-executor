@@ -242,6 +242,167 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
   This covers Patient read, search Bundle, JSON, XML, and format negotiation.
 - Existing R4, STU3, and DSTU2 tests remain unchanged in behavior and pass their regression matrix.
 
+## R4B Full-Suite Endpoint Audit (2026-07-17)
+
+### Scope And Execution
+
+- This was a diagnostic run against the local Spark R4B endpoint at
+  `http://localhost:18080/fhir`. It used the same Spark and Mongo image digests
+  recorded for the FormatTest audit above.
+- The run used temporary `path:` dependencies for the local `../fhir_models`,
+  `../fhir_client`, `../fhir_stu3_models`, and `../fhir_dstu2_models`
+  repositories so the unpublished R4B model and client changes were loaded.
+- Only suites whose existing `supported_versions` declaration contained `:r4`
+  were temporarily given `:r4b`. STU3-only, DSTU2-only, TestScript, and
+  explicitly unsupported suites were not enabled. These temporary annotations
+  were made in an isolated copy and are not evidence that every suite should be
+  permanently annotated for R4B.
+- The normal suite registry exposed 12 eligible suites. Eligibility was checked
+  with:
+
+  ```sh
+  bundle exec rake "crucible:list_suites[r4b]"
+  ```
+
+- Each suite was then run separately through the documented Rake entry point:
+
+  ```sh
+  bundle exec rake "crucible:execute[http://localhost:18080/fhir,r4b,SUITE_NAME,,stdout]"
+  ```
+
+  The empty resource argument caused `ResourceTest` and `SearchTest` to exercise
+  every R4B resource rather than a single named resource. Suites were run
+  sequentially because they create, update, and delete shared endpoint data.
+- The test process must be allowed to connect to the local endpoint. A sandboxed
+  attempt produced `Operation not permitted` TCP errors and invalid all-skip or
+  all-error results; those results were discarded. The Rake task also expects
+  the local `logs/` directory to exist.
+
+### Results
+
+| Suite | Pass | Fail | Error | TODO skip | Exit |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `SprinklerSearchTest` | 36 | 0 | 0 | 2 | 0 |
+| `ConsentSearchByPatientReferenceTest` | 1 | 0 | 0 | 0 | 0 |
+| `ElementsSearchParameterTest` | 1 | 0 | 0 | 1 | 0 |
+| `UnknownSearchParameterTest` | 12 | 0 | 0 | 0 | 0 |
+| `ReadTest` | 5 | 0 | 0 | 0 | 0 |
+| `ResourceTest` | 2075 | 10 | 0 | 417 | 1 |
+| `FhirPathPatchTest` | 4 | 0 | 0 | 2 | 0 |
+| `FormatTest` | 22 | 0 | 0 | 0 | 0 |
+| `TransactionAndBatchTest` | 2 | 6 | 0 | 5 | 1 |
+| `SearchTest` | 973 | 0 | 0 | 0 | 0 |
+| `HistoryTest` | 10 | 0 | 0 | 0 | 0 |
+| `RobustSearchTest` | 0 | 0 | 0 | 1 | 0 |
+| **Total** | **3141** | **16** | **0** | **428** | **2 suites failed** |
+
+All 428 skips were existing `TODO` skips. They do not cause the Rake task to
+exit non-zero. The 16 failures are concentrated in the two suites shown above;
+they are not 16 independent compatibility defects.
+
+### Failure Areas
+
+#### 1. R4B Condition Status Conversion
+
+- `TransactionAndBatchTest` fails first in `XFER0`. The generated transaction
+  serializes `Condition.verificationStatus` as the primitive string
+  `"confirmed"`, while R4B requires a `CodeableConcept`.
+- Spark returns HTTP 400 with an OperationOutcome reporting that it encountered
+  a JSON primitive where a non-primitive `verificationStatus` object was
+  required. Five later transaction assertions then fail because they depend on
+  `XFER0` having created the patient record.
+- `ResourceGenerator.fix_condition` currently converts R4 status strings only
+  when `resource.is_a?(FHIR::Condition)`. A `FHIR::R4B::Condition` does not
+  satisfy that check, so the existing R4 compatibility correction is skipped.
+- The correction must become namespace-aware and cover both
+  `clinicalStatus` and `verificationStatus` without making R4B inherit from or
+  fall back to the R4 model class. Add focused serialization coverage before
+  rerunning `TransactionAndBatchTest`.
+
+#### 2. Recursive PackagedProductDefinition Generation
+
+- `ResourceTest` deterministically generates invalid deeply nested
+  `PackagedProductDefinition` resources. At the generator recursion boundary,
+  `package.package[].package[].containedItem[].item` is omitted even though its
+  minimum cardinality is one.
+- Spark rejects these resources with HTTP 400. The initial create failures then
+  cause conditional create, conditional update, and history assertions to fail
+  or operate on incomplete setup state.
+- A targeted documented run reproduces the problem:
+
+  ```sh
+  bundle exec rake "crucible:execute[http://localhost:18080/fhir,r4b,ResourceTest,PackagedProductDefinition,stdout]"
+  ```
+
+- Fixing this requires a finite minimal representation for the recursive
+  package structure. The recursion guard must still prevent infinite trees, but
+  it cannot terminate by omitting a required child. Add a generator test that
+  validates the generated JSON or XML against the R4B model/schema.
+
+#### 3. Abstract Questionnaire Item Code Generation
+
+- The generated R4B metadata for `Questionnaire.item.type` includes the
+  abstract code `question` in `valid_codes`. `ResourceGenerator` samples from
+  that list and may emit `type: "question"` in one or more nested items.
+- Spark rejects that value because it is not a selectable
+  `QuestionnaireItemType`. The exact number of failed ResourceTest assertions
+  varies with random generation; a targeted rerun reproduced failures in
+  create and update operations.
+- Reproduce with:
+
+  ```sh
+  bundle exec rake "crucible:execute[http://localhost:18080/fhir,r4b,ResourceTest,Questionnaire,stdout]"
+  ```
+
+- Preserve the complete terminology definitions needed at runtime, but prevent
+  abstract or non-selectable codes from being chosen for generated resource
+  instances. Add deterministic coverage proving that generated Questionnaire
+  items use only concrete item types.
+
+### Follow-Up Sequence
+
+1. Add focused failing tests for R4B Condition status conversion,
+   PackagedProductDefinition recursion, and Questionnaire item-type selection.
+2. Make the resource generator namespace-aware where it currently dispatches
+   only on top-level R4 classes. Review the rest of `apply_invariants!` for the
+   same pattern before adding broad R4B suite annotations.
+3. Fix and rerun the three targeted commands above, including
+   `TransactionAndBatchTest` through `crucible:execute`.
+4. Repeat the complete 12-suite R4B endpoint run and retain per-suite output and
+   shell exit status.
+5. Permanently add `:r4b` only to suites that pass their focused audit, then run
+   the existing R4 unit and endpoint regression suites to detect shared
+   generator regressions.
+
+### Existing Endpoint Regression Baselines
+
+The following existing endpoint results were provided on 2026-07-17. They were
+not rerun as part of the R4B audit, but should be retained as the comparison
+baseline for later cross-version regression runs.
+
+| Version | Pass | Fail | Error | Skip |
+| --- | ---: | ---: | ---: | ---: |
+| STU3 | 2876 | 0 | 0 | 413 |
+| R4 | 3267 | 0 | 0 | 443 |
+
+Future runs should compare both the totals and the individual skipped tests.
+The totals alone do not establish whether a changed skip is expected.
+
+### Deferred STU3 TestScript Regression
+
+- Run the 71 FHIR TestScript artifacts against a STU3 endpoint as a separate
+  regression exercise. They remain explicitly STU3-only and are not part of
+  either the R4 or R4B suite runs.
+- Before relying on that run, correct or work around the dedicated
+  `crucible:execute_all_testscripts` and `crucible:testreport` tasks. They do not
+  currently accept a FHIR version, do not call `use_fhir_version`, and bypass
+  the normal `supported_versions` filter. Because a new `FHIR::Client` defaults
+  to R4, invoking those tasks as written does not guarantee a STU3 client even
+  though the TestScript artifacts are parsed and annotated as STU3.
+- The eventual regression command must explicitly select `:stu3`, retain
+  per-TestScript output and shell exit status, and use a CapabilityStatement to
+  confirm that the target endpoint reports STU3 before execution.
+
 ## Recommended Implementation Order
 
 1. Complete: reconcile the `fhir_models` baseline and dependency strategy.
