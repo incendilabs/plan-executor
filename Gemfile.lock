@@ -1,8 +1,9 @@
 GIT
   remote: https://github.com/incendilabs/fhir_client.git
-  revision: a2298086b051f18595dcfe5768f63545f2a271bb
+  revision: 79026641f9b2ac7cf30bc27a3528e505d34c67e8
+  branch: master
   specs:
-    fhir_client (4.0.4)
+    fhir_client (5.0.0)
       activesupport (>= 3)
       addressable (>= 2.9.0)
       fhir_dstu2_models (>= 1.0.10)
@@ -19,6 +20,17 @@ GIT
   revision: 66c58438d323f634116dc937446d42d9b4356687
   specs:
     fhir_dstu2_models (1.0.10)
+      bcp47 (>= 0.3)
+      date_time_precision (>= 0.8)
+      mime-types (>= 3.0)
+      nokogiri (>= 1.10.4)
+
+GIT
+  remote: https://github.com/incendilabs/fhir_models.git
+  revision: a143d2e21d0253b33fdaeb17e2d152ad656c9a3e
+  branch: master
+  specs:
+    fhir_models (4.1.0)
       bcp47 (>= 0.3)
       date_time_precision (>= 0.8)
       mime-types (>= 3.0)
@@ -90,11 +102,6 @@ GEM
       logger
     faraday-net_http (3.4.4)
       net-http (~> 0.5)
-    fhir_models (4.3.0)
-      bcp47 (>= 0.3)
-      date_time_precision (>= 0.8)
-      mime-types (>= 3.0)
-      nokogiri (>= 1.11.4)
     hashdiff (1.2.1)
     http-accept (1.7.0)
     http-cookie (1.1.4)
@@ -182,7 +189,7 @@ DEPENDENCIES
   awesome_print
   fhir_client!
   fhir_dstu2_models!
-  fhir_models (~> 4.1)
+  fhir_models!
   fhir_stu3_models!
   plan_executor!
   pry (~> 0.15.0)

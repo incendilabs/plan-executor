@@ -53,11 +53,11 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
   are selected from concrete expansion entries while abstract and inactive
   entries remain available in the checked-in terminology definitions. The fix
   is commit `84fa7c4`.
-- Remaining integration work consists of publishing or pinning compatible
-  `fhir_models` and `fhir_client` revisions, updating dependency resolution,
-  and running the final cross-version regression matrix. Immutable dependency
-  revisions must be selected after the feature branches are rebased into
-  `origin/master`, because those merges change the commit SHAs.
+- `plan-executor` now resolves `fhir_models` and `fhir_client` from their merged
+  `origin/master` branches, with the exact resolved revisions retained in
+  `Gemfile.lock`.
+- Remaining integration work consists of completing the STU3 and DSTU2
+  cross-version regression matrix.
 
 ## Baseline And Dependency Actions
 
@@ -83,7 +83,8 @@ R4B feature work is expected in `fhir_models`, `fhir_client`, and this repositor
   for the XML schema archive.
 - Define the local cross-repository development setup, using temporary `path:` dependencies or equivalent local wiring so changes in `../fhir_models` and `../fhir_client` are exercised by this repository.
 - Define the release and dependency update order: `fhir_models`, then `fhir_client`, then `plan-executor`.
-- Update gem version constraints and `Gemfile.lock` to released versions or immutable commit references before final integration.
+- Complete: resolve `fhir_models` and `fhir_client` from their merged master
+  branches and retain their immutable resolved revisions in `Gemfile.lock`.
 
 ## Model Definition Architecture
 
@@ -563,6 +564,22 @@ The totals alone do not establish whether a changed skip is expected.
   errors, and the existing `3` TODO skips. No generated Questionnaire payload
   contained `type: question`.
 
+### Merged Dependency Verification
+
+- `fhir_models` resolves from
+  `https://github.com/incendilabs/fhir_models.git` master revision
+  `a143d2e21d0253b33fdaeb17e2d152ad656c9a3e`.
+- `fhir_client` resolves from
+  `https://github.com/incendilabs/fhir_client.git` master revision
+  `79026641f9b2ac7cf30bc27a3528e505d34c67e8`.
+- A repository Docker build using only the merged Git dependencies produced
+  `incendi/plan_executor:master-r4b-deps`, image ID
+  `sha256:927c11680443ee857d039ec71eea63cfa8b6c28da5a96d494a1c5b9c9f974345`.
+  The image loaded `fhir_client` 5.0.0, `fhir_models` 4.1.0, and
+  `FHIR::R4B::Patient`.
+- The Docker unit suite passed `1224` tests and `3694` assertions with no
+  failures or errors.
+
 ### Deferred STU3 TestScript Regression
 
 - Run the 71 FHIR TestScript artifacts against a STU3 endpoint as a separate
@@ -586,8 +603,8 @@ The totals alone do not establish whether a changed skip is expected.
 5. Complete: add the central version registry and fail-fast version resolution to `plan-executor`.
 6. Complete: all 12 R4-capable Ruby suites explicitly declare R4B support and
    have been run against the R4B endpoint.
-7. In progress: update dependencies and complete the STU3 and DSTU2 endpoint
-   regression matrix. Fresh R4 and R4B endpoint runs are complete.
+7. In progress: complete the STU3 and DSTU2 endpoint regression matrix. Merged
+   dependency resolution and fresh R4 and R4B endpoint runs are complete.
 8. Complete: remove implicit R4 defaults from `fhir_client` and
    `plan-executor`, make generator namespaces explicit, verify the breaking
    change in Docker, and commit it atomically.
