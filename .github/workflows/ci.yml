@@ -14,11 +14,26 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       -
-        name: Checkout repo
+        name: Checkout plan-executor
         uses: actions/checkout@v7
       -
-        name: Build docker image
+        name: Build plan-executor Docker image
         run: docker build -t incendi/plan_executor:latest .
+      -
+        name: Checkout Spark
+        uses: actions/checkout@v7
+        with:
+          repository: FirelyTeam/spark
+          ref: master
+          path: spark
+      -
+        name: Build Spark R4 Docker image
+        run: docker build spark --file spark/.docker/linux/Spark.R4.Dockerfile
+          --tag sparkfhir/spark:r4-latest
+      -
+        name: Build Mongo R4 Docker image
+        run: docker build spark --file spark/.docker/linux/Mongo.R4.Dockerfile
+          --tag sparkfhir/mongo:r4-latest
       -
         name: Run tests
         run: |
