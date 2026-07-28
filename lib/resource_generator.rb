@@ -2,6 +2,7 @@ module Crucible
   module Tests
 
     class ResourceGenerator
+      class RequiredElementGenerationError < StandardError; end
 
       # Allow to embed this many extra levels if min != 0.
       # We no longer cut off generation if an element has a min requirement.
@@ -36,11 +37,12 @@ module Crucible
       # If `embedded` is greater than zero, alledded children will also
       # be generated.
       #
-      def self.generate(klass,embedded=0)
+      def self.generate(klass,embedded=0, path: nil)
         resource = klass.new
         namespace = Crucible::FHIRVersion.namespace_name(Crucible::FHIRVersion.for_class(klass))
+        path ||= klass.name
         Time.zone = 'UTC'
-        set_fields!(resource, namespace, embedded)
+        set_fields!(resource, namespace, embedded, path: path)
         resource.id=nil if resource.respond_to?(:id=)
         resource.versionId=nil if resource.respond_to?(:versionId=)
         resource.version=nil if resource.respond_to?(:version=)
@@ -52,7 +54,14 @@ module Crucible
       #
       # Set the fields of this resource to have some random values.
       #
-      def self.set_fields!(resource, namespace, embedded=0, choice_selector: nil)
+      def self.set_fields!(
+        resource,
+        namespace,
+        embedded=0,
+        choice_selector: nil,
+        path: nil
+      )
+        path ||= resource.class.name
         choice_selector ||= ->(types) { types.sample }
         all_multiple_fields = multiple_type_fields(resource.class)
         selected_multiples = selectable_multiple_type_fields(
@@ -71,6 +80,8 @@ module Crucible
 
         resource.class::METADATA.each do |key, meta|
           type = meta['type']
+          method = meta['local_name'] || key
+          field_path = "#{path}.#{method}"
           next if type == 'Meta'
           next if ['id','contained','version','versionId','implicitRules'].include? key
           next if unselected_multiples.include?(key)
@@ -127,13 +138,24 @@ module Crucible
           elsif type == 'base64Binary'
             gen = SecureRandom.base64
           elsif "#{namespace}::RESOURCES".constantize.include?(type)
-            if embedded > 0 || ((meta['binding'] || meta['min'] != 0) && EMBEDDED_LOOP_GUARD + embedded > 0)
-              type = 'Patient' if type == 'Resource' # can't use abstract "Resource" here, or can??
-              gen = generate_child(type, namespace, embedded-1)
-            end
+            type = 'Patient' if type == 'Resource' # can't use abstract "Resource" here, or can??
+            gen = generate_complex_field(
+              type,
+              namespace,
+              embedded,
+              meta,
+              field_path
+            )
           elsif "#{namespace}::TYPES".constantize.include?(type)
-            if embedded > 0 || ((type == 'Coding' || meta['binding'] || meta['min'] != 0) && EMBEDDED_LOOP_GUARD + embedded > 0)
-              gen = generate_child(type, namespace, embedded-1)
+            gen = generate_complex_field(
+              type,
+              namespace,
+              embedded,
+              meta,
+              field_path,
+              force: type == 'Coding'
+            )
+            if gen
               # apply bindings
               if type == 'CodeableConcept' && meta['binding'] && meta['binding']['uri'] == 'http://hl7.org/fhir/ValueSet/use-context'
                 gen.coding.each do |c|
@@ -181,22 +203,33 @@ module Crucible
               end
             end
           elsif resource.class.constants.include? type.demodulize.to_sym
-            if embedded > 0 || ((meta['binding'] || meta['min'] != 0) && EMBEDDED_LOOP_GUARD + embedded > 0)
-              # CHILD component
-              gen = generate_child(type, namespace, embedded-1)
-            end
+            # CHILD component
+            gen = generate_complex_field(
+              type,
+              namespace,
+              embedded,
+              meta,
+              field_path
+            )
           elsif ancestor_fhir_classes(resource.class, namespace).include? type.demodulize.to_sym
-            if embedded > 0 || ((meta['binding'] || meta['min'] != 0) && EMBEDDED_LOOP_GUARD + embedded > 0)
-              gen = generate_child(type, namespace, embedded-1)
-            end
+            gen = generate_complex_field(
+              type,
+              namespace,
+              embedded,
+              meta,
+              field_path
+            )
           elsif ("#{namespace}::#{type}".constantize rescue nil)
-            if embedded > 0 || ((meta['binding'] || meta['min'] != 0) && EMBEDDED_LOOP_GUARD + embedded > 0)
-              gen = generate_child(type, namespace, embedded-1)
-            end
+            gen = generate_complex_field(
+              type,
+              namespace,
+              embedded,
+              meta,
+              field_path
+            )
           else
             puts "Unable to generate field #{key} for #{resource.class} -- unrecognized type: #{type}"
           end
-          method = meta['local_name'] ? meta['local_name'] : key
           gen = [gen] if meta['max'] > 1 && !gen.nil?
           resource.method("#{method}=").call(gen) if !gen.nil?
         end
@@ -335,10 +368,59 @@ module Crucible
         classes
       end
 
-      def self.generate_child(type, namespace, embedded=0)
+      def self.generate_complex_field(
+        type,
+        namespace,
+        embedded,
+        meta,
+        field_path,
+        force: false
+      )
+        required = meta.fetch('min', 0).positive?
+        extend_depth = force || meta['binding'] || required
+        within_loop_guard = EMBEDDED_LOOP_GUARD + embedded > 0
+        should_generate = embedded.positive? ||
+                          (extend_depth && within_loop_guard)
+
+        unless should_generate
+          raise_required_element_generation_error!(
+            meta,
+            field_path,
+            embedded
+          ) if required
+          return
+        end
+
+        child = generate_child(
+          type,
+          namespace,
+          embedded - 1,
+          path: field_path
+        )
+        raise_required_element_generation_error!(
+          meta,
+          field_path,
+          embedded
+        ) if child.nil? && required
+        child
+      end
+
+      def self.raise_required_element_generation_error!(
+        meta,
+        field_path,
+        embedded
+      )
+        raise RequiredElementGenerationError,
+              "Unable to generate required element #{field_path} " \
+              "(definition #{meta['path']}, minimum #{meta.fetch('min', 0)}) " \
+              "within recursion guard #{EMBEDDED_LOOP_GUARD} " \
+              "at embedded depth #{embedded}"
+      end
+
+      def self.generate_child(type, namespace, embedded=0, path: nil)
         return if ['Meta','Extension','PrimitiveExtension'].include? type
         klass = "#{namespace}::#{type}".constantize
-        generate(klass, embedded)
+        generate(klass, embedded, path: path)
       end
 
       def self.random_oid
