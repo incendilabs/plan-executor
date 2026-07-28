@@ -5,11 +5,9 @@ namespace :crucible do
       raise 'Usage: rake "crucible:generate_r4b_structure[path/to/r4b-definitions.json.zip]"'
     end
 
-    root = File.expand_path('../..', __dir__)
     Crucible::FHIRStructureGenerator.write_from_archive(
-      File.expand_path(args.definitions_archive),
-      File.join(root, 'lib', 'FHIR_structure_r4.json'),
-      File.join(root, 'lib', 'FHIR_structure_r4b.json')
+      Crucible::FHIRStructureGenerator::CONFIGURATIONS.fetch(:r4b),
+      File.expand_path(args.definitions_archive)
     )
   end
 end
