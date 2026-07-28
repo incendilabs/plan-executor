@@ -1,6 +1,7 @@
 require_relative '../test_helper'
 
 class FHIRStructureTest < Test::Unit::TestCase
+  STRUCTURE_VERSIONS = [:dstu2, :stu3, :r4, :r4b].freeze
 
   def test_fhir_starburst_root
     structure = Crucible::FHIRStructure.get(:r4)
@@ -23,7 +24,7 @@ class FHIRStructureTest < Test::Unit::TestCase
   end
 
   def test_no_duplicate_names_in_starburst
-    Crucible::FHIRVersion::KNOWN.each do |version|
+    STRUCTURE_VERSIONS.each do |version|
       structure = Crucible::FHIRStructure.get(version)
       names = all_names(structure)
 
@@ -37,7 +38,7 @@ class FHIRStructureTest < Test::Unit::TestCase
 
   def test_no_missing_resources_in_starburst
 
-    Crucible::FHIRVersion::KNOWN.each do |version|
+    STRUCTURE_VERSIONS.each do |version|
       structure = Crucible::FHIRStructure.get(version)
       resource_subset = structure['children'].select{|c| c['name'] == 'RESOURCES'}.first
       structure_resources = all_names(resource_subset, true).map{|e| e.downcase.delete(' ')}
@@ -60,7 +61,7 @@ class FHIRStructureTest < Test::Unit::TestCase
 
     names = []
 
-    Crucible::FHIRVersion::KNOWN.each do |version|
+    STRUCTURE_VERSIONS.each do |version|
       structure = Crucible::FHIRStructure.get(version)
       names.concat(all_names(structure).map{|e| e.downcase.delete(' ')})
     end
