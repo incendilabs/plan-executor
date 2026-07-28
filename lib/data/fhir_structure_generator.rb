@@ -48,7 +48,20 @@ module Crucible
       template_path: File.join(ROOT, 'lib', 'FHIR_structure_r4.json'),
       output_path: File.join(ROOT, 'lib', 'FHIR_structure_r4b.json')
     )
-    CONFIGURATIONS = { r4b: R4B_CONFIGURATION }.freeze
+    R5_CONFIGURATION = Configuration.new(
+      version: :r5,
+      label: 'R5',
+      source_url: 'https://hl7.org/fhir/R5/definitions.json.zip',
+      sha256: 'df0d7259b4a8741d59f4971d96dd486423ecbd414c7060e9dc006ae3c3209c0c',
+      archive_entry: 'profiles-resources.json',
+      category_overrides: {},
+      template_path: File.join(ROOT, 'lib', 'FHIR_structure_r4.json'),
+      output_path: File.join(ROOT, 'lib', 'FHIR_structure_r5.json')
+    )
+    CONFIGURATIONS = {
+      r4b: R4B_CONFIGURATION,
+      r5: R5_CONFIGURATION
+    }.freeze
 
     def self.from_archive(configuration, archive_path)
       checksum = Digest::SHA256.file(archive_path).hexdigest

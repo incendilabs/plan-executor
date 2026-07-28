@@ -39,6 +39,20 @@ class FHIRStructureGeneratorTest < Test::Unit::TestCase
     end
   end
 
+  def test_r5_configuration_pins_the_official_root_archive_entry
+    configuration = Crucible::FHIRStructureGenerator::CONFIGURATIONS.fetch(:r5)
+
+    assert_equal :r5, configuration.version
+    assert_equal 'R5', configuration.label
+    assert_equal 'https://hl7.org/fhir/R5/definitions.json.zip', configuration.source_url
+    assert_equal 'df0d7259b4a8741d59f4971d96dd486423ecbd414c7060e9dc006ae3c3209c0c',
+                 configuration.sha256
+    assert_equal 'profiles-resources.json', configuration.archive_entry
+    assert_empty configuration.category_overrides
+    assert_equal File.join(ROOT, 'lib', 'FHIR_structure_r4.json'), configuration.template_path
+    assert_equal File.join(ROOT, 'lib', 'FHIR_structure_r5.json'), configuration.output_path
+  end
+
   def test_reads_the_exact_nested_r4b_archive_entry
     structure = Crucible::FHIRStructureGenerator.from_archive(r4b_fixture_configuration, R4B_FIXTURE)
 
