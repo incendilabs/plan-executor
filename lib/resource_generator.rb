@@ -7,6 +7,11 @@ module Crucible
       # We no longer cut off generation if an element has a min requirement.
       # This just guards an infinite loop case, if it is possible in FHIR
       EMBEDDED_LOOP_GUARD = 10
+      SIMPLE_QUANTITY_FIELDS = {
+        'Range' => [:low, :high],
+        'SampledData' => [:origin],
+        'Observation::ReferenceRange' => [:low, :high]
+      }.freeze
       #
       # Generate a FHIR resource for the given class `klass`
       # If `embedded` is greater than zero, alledded children will also
@@ -387,8 +392,47 @@ module Crucible
         resource
       end
 
+      def self.clear_prohibited_observation_quantity_comparators!(observation)
+        return observation unless observation.respond_to?(:resourceType)
+        return observation unless observation.resourceType == 'Observation'
+
+        each_fhir_model(observation) do |model|
+          SIMPLE_QUANTITY_FIELDS.fetch(relative_fhir_class_name(model), []).each do |field|
+            quantity = model.public_send(field)
+            quantity.comparator = nil if quantity
+          end
+        end
+        observation
+      end
+
+      def self.each_fhir_model(value, seen = {}, &block)
+        if value.is_a?(Array)
+          value.each { |entry| each_fhir_model(entry, seen, &block) }
+          return
+        end
+        if value.is_a?(Hash)
+          value.each_value { |entry| each_fhir_model(entry, seen, &block) }
+          return
+        end
+        return unless value.is_a?(FHIR::Model)
+        return if seen[value.object_id]
+
+        seen[value.object_id] = true
+        yield value
+        value.instance_variables.each do |variable|
+          each_fhir_model(value.instance_variable_get(variable), seen, &block)
+        end
+      end
+
+      def self.relative_fhir_class_name(model)
+        version = Crucible::FHIRVersion.for_class(model)
+        namespace = Crucible::FHIRVersion.namespace_name(version)
+        model.class.name.sub(/\A#{Regexp.escape(namespace)}::/, '')
+      end
+
       def self.apply_invariants!(resource)
         fix_codeable_reference(resource)
+        clear_prohibited_observation_quantity_comparators!(resource)
 
         case resource
         when FHIR::ActivityDefinition
@@ -756,22 +800,6 @@ module Crucible
             end unless resource.enteralFormula.administration.nil?
           end
           resource.supplement.each { |s| s.quantity.comparator = nil unless s.quantity.nil? }
-        when FHIR::Observation
-          resource.referenceRange.each do |range|
-            range.low.comparator = nil unless range.low.nil?
-            range.high.comparator = nil unless range.high.nil?
-          end
-          resource.component.each do |component|
-            if !component.valueRange.nil?
-              component.valueRange.low.comparator = nil unless component.valueRange.low.nil?
-              component.valueRange.high.comparator = nil unless component.valueRange.high.nil?
-            end
-            component.referenceRange.each do |range|
-              range.low.comparator = nil unless range.low.nil?
-              range.high.comparator = nil unless range.high.nil?
-            end
-          end
-
         when FHIR::OperationDefinition
           resource.parameter.each do |p|
             p.binding = nil
@@ -1538,22 +1566,6 @@ module Crucible
             end unless resource.enteralFormula.administration.nil?
           end
           resource.supplement.each { |s| s.quantity.comparator = nil unless s.quantity.nil? }
-        when FHIR::STU3::Observation
-          resource.referenceRange.each do |range|
-            range.low.comparator = nil unless range.low.nil?
-            range.high.comparator = nil unless range.high.nil?
-          end
-          resource.component.each do |component|
-            if !component.valueRange.nil?
-              component.valueRange.low.comparator = nil unless component.valueRange.low.nil?
-              component.valueRange.high.comparator = nil unless component.valueRange.high.nil?
-            end
-            component.referenceRange.each do |range|
-              range.low.comparator = nil unless range.low.nil?
-              range.high.comparator = nil unless range.high.nil?
-            end
-          end
-
         when FHIR::STU3::OperationDefinition
           resource.parameter.each do |p|
             p.binding = nil
