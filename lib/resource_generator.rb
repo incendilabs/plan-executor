@@ -7,6 +7,9 @@ module Crucible
       # We no longer cut off generation if an element has a min requirement.
       # This just guards an infinite loop case, if it is possible in FHIR
       EMBEDDED_LOOP_GUARD = 10
+      INTEGER64_MIN = -(2**63)
+      INTEGER64_MAX = (2**63) - 1
+      INTEGER64_RANGE = INTEGER64_MAX - INTEGER64_MIN + 1
       SIMPLE_QUANTITY_FIELDS = {
         'Range' => [:low, :high],
         'SampledData' => [:origin],
@@ -33,22 +36,19 @@ module Crucible
       #
       # Set the fields of this resource to have some random values.
       #
-      def self.set_fields!(resource, namespace, embedded=0)
+      def self.set_fields!(resource, namespace, embedded=0, choice_selector: nil)
+        choice_selector ||= ->(types) { types.sample }
+        all_multiple_fields = multiple_type_fields(resource.class)
+        selected_multiples = selectable_multiple_type_fields(
+          resource.class,
+          namespace
+        ).filter_map do |_prefix, fields|
+          next if fields.empty?
 
-        unselected_multiples = []
-        if resource.class.constants.include? :MULTIPLE_TYPES
-          multiples = resource.class::MULTIPLE_TYPES.keys
-          all_multiples = multiples.map{|k| resource.class::MULTIPLE_TYPES[k].map{|d| "#{k}#{d.titleize.split.join}" }}.flatten
-
-          # In DSTU2 Quantity sometimes can't be used directly, but the concrete type must be used instead.
-          # For example, Condition.abatementQuantity should be of type Age, but there's no such type
-          # definition in the DSTU2 models. So here, we're just skipping Quantity choice,
-          # and selecting some other (probably primitive) type for the multi-choice FHIR property.
-          ignore_multiple_types = ['Meta']
-          ignore_multiple_types += ['Quantity'] if namespace == 'FHIR::DSTU2'
-          selected_multiples = multiples.map { |k| "#{k}#{resource.class::MULTIPLE_TYPES[k].reject { |t| ignore_multiple_types.include?(t) }.sample.titleize.split.join}" }
-          unselected_multiples = all_multiples - selected_multiples
+          fields.fetch(choice_selector.call(fields.keys))
         end
+        unselected_multiples = all_multiple_fields.values.flat_map(&:values) -
+                               selected_multiples
         unselected_multiples.each do |key|
           resource.method("#{key}=").call(nil)
         end
@@ -94,7 +94,9 @@ module Crucible
             gen = DateTime.now.strftime("%T")
           elsif type == 'boolean'
             gen = (SecureRandom.random_number(100) % 2 == 0)
-          elsif ['positiveInt', 'unsignedInt', 'integer', 'integer64'].include?(type)
+          elsif type == 'integer64'
+            gen = random_integer64
+          elsif ['positiveInt', 'unsignedInt', 'integer'].include?(type)
              gen = (SecureRandom.random_number(100) + 1) # add one in case this is a "positiveInt" which must be > 0
           elsif type == 'decimal'
             gen = SecureRandom.random_number
@@ -164,6 +166,35 @@ module Crucible
           resource.method("#{method}=").call(gen) if !gen.nil?
         end
         resource
+      end
+
+      def self.multiple_type_fields(klass)
+        return {} unless klass.const_defined?(:MULTIPLE_TYPES, false)
+
+        metadata = klass.const_get(:METADATA, false)
+        klass.const_get(:MULTIPLE_TYPES, false).each_with_object({}) do |(prefix, types), groups|
+          groups[prefix] = types.each_with_object({}) do |type, fields|
+            field = "#{prefix}#{type[0].upcase}#{type[1..]}"
+            fields[type] = field if metadata.key?(field)
+          end
+        end
+      end
+
+      def self.selectable_multiple_type_fields(klass, namespace)
+        ignored_types = ['Meta']
+        # Some DSTU2 choices advertise abstract Quantity where only a concrete
+        # subtype is valid, so retain the established DSTU2-only exclusion.
+        ignored_types << 'Quantity' if namespace == 'FHIR::DSTU2'
+
+        multiple_type_fields(klass).each_with_object({}) do |(prefix, fields), selectable|
+          selectable[prefix] = fields.reject do |type, _field|
+            ignored_types.include?(type)
+          end
+        end
+      end
+
+      def self.random_integer64(random: SecureRandom)
+        INTEGER64_MIN + random.random_number(INTEGER64_RANGE)
       end
 
       def self.selectable_valid_codes(meta, namespace)
