@@ -35,10 +35,9 @@ module Crucible
 
       def initialize(client, client2=nil)
         @client = client
-        FHIR::Resource.new.client = client
-        FHIR::DSTU2::Resource.new.client = client
-        FHIR::STU3::Resource.new.client = client
-        FHIR::R4B::Resource.new.client = client
+        Crucible::FHIRVersion::KNOWN.each do |fhir_version|
+          Crucible::FHIRVersion.namespace(fhir_version).const_get(:Resource).client = client
+        end
         @client2 = client2
         @client.monitor_requests if @client
         @client2.monitor_requests if @client2
