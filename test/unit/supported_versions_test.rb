@@ -25,4 +25,10 @@ class SupportedVersionsTest < Test::Unit::TestCase
 
     assert_equal r4_suites.map(&:class).sort_by(&:name), r4b_suites.map(&:class).sort_by(&:name)
   end
+
+  def test_r5_is_not_enabled_for_any_suite_yet
+    suites = Crucible::Tests::SuiteEngine.new.tests
+
+    assert_true suites.none? { |suite| suite.supported_versions.include?(:r5) }
+  end
 end

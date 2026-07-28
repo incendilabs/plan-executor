@@ -4,13 +4,14 @@ module Crucible
       dstu2: 'FHIR::DSTU2',
       stu3: 'FHIR::STU3',
       r4: 'FHIR',
-      r4b: 'FHIR::R4B'
+      r4b: 'FHIR::R4B',
+      r5: 'FHIR::R5'
     }.freeze
     KNOWN = NAMESPACES.keys.freeze
 
     class UnsupportedVersionError < ArgumentError; end
 
-    def self.resolve(value)
+    def self.resolve(value = nil)
       normalized = value.to_s.strip.downcase
       if normalized.empty?
         raise UnsupportedVersionError,
