@@ -165,3 +165,27 @@ Docker build context remain under `tmp/task-5h/` and are not committed.
 The archive snapshots do not contain `.git` metadata, so gemspec evaluation
 emits non-fatal `not a git repository` diagnostics. Bundler installation and
 all verification commands still exit successfully.
+
+## R5 Generator Compatibility Adjustments
+
+Task 6F keeps specification-valid resource generation separate from stricter
+wire-format compatibility adjustments. The all-resource audit identified one
+such adjustment:
+
+- The R5 StructureDefinition for
+  `ImagingSelection.instance.imageRegion2D.regionType` permits `point`,
+  `polyline`, `interpolated`, `circle`, and `ellipse`.
+- The official R5 XML schema applies its shared 3D graphic-type enumeration to
+  both the 2D and 3D elements. It therefore rejects the otherwise valid 2D
+  values `interpolated` and `circle`.
+- Generated 2D regions are restricted to the specification-valid intersection
+  `point`, `polyline`, and `ellipse`, while already compatible values are
+  preserved.
+
+This is an official-schema compatibility adjustment, not an endpoint-specific
+server workaround. No server-specific generator adjustment was added.
+
+The same audit found no equivalent R5 invariant requirement for
+`RequestOrchestration` or `DeviceUsage`. Their R4B predecessors
+`RequestGroup` and `DeviceUseStatement` are not resolved from R5 invariant
+dispatch.
