@@ -10,6 +10,22 @@ module Crucible
       INTEGER64_MIN = -(2**63)
       INTEGER64_MAX = (2**63) - 1
       INTEGER64_RANGE = INTEGER64_MAX - INTEGER64_MIN + 1
+      MIME_TYPE_BINDINGS = [
+        'http://hl7.org/fhir/ValueSet/mimetypes',
+        'http://hl7.org/fhir/ValueSet/content-type',
+        'http://www.rfc-editor.org/bcp/bcp13.txt'
+      ].freeze
+      REQUIRED_BINDING_FALLBACKS = {
+        'http://tools.ietf.org/html/bcp47' =>
+          'http://hl7.org/fhir/ValueSet/languages',
+        'http://hl7.org/fhir/ValueSet/ucum-units' =>
+          'http://hl7.org/fhir/ValueSet/units-of-time'
+      }.freeze
+      SELECTABLE_CODE_FALLBACKS = {
+        'http://tools.ietf.org/html/bcp47' => {
+          'urn:ietf:bcp:47' => ['en-US'].freeze
+        }.freeze
+      }.freeze
       SIMPLE_QUANTITY_FIELDS = {
         'Range' => [:low, :high],
         'SampledData' => [:origin],
@@ -67,12 +83,17 @@ module Crucible
           elsif type == 'id'
             gen = SecureRandom.uuid
           elsif type == 'code'
-            if meta['valid_codes']
-              gen = selectable_valid_codes(meta, namespace).values.flatten.sample
-            elsif meta['binding'] && ['http://tools.ietf.org/html/bcp47','http://hl7.org/fhir/ValueSet/languages'].include?(meta['binding']['uri'])
-              gen = 'en-US'
-            elsif meta['binding'] && ['http://www.rfc-editor.org/bcp/bcp13.txt','http://hl7.org/fhir/ValueSet/content-type'].include?(meta['binding']['uri'])
+            selectable_codes = selectable_valid_codes(meta, namespace)
+            if selectable_codes && !selectable_codes.empty?
+              gen = selectable_codes.values.flatten.sample
+            elsif MIME_TYPE_BINDINGS.include?(normalize_binding_uri(meta.dig('binding', 'uri')))
               gen = MIME::Types.to_a.sample.content_type
+            elsif required_binding?(meta)
+              if meta.fetch('min', 0).zero?
+                gen = nil
+              else
+                raise unselectable_binding_message(meta)
+              end
             else
               gen = SecureRandom.base64
             end
@@ -114,27 +135,41 @@ module Crucible
             if embedded > 0 || ((type == 'Coding' || meta['binding'] || meta['min'] != 0) && EMBEDDED_LOOP_GUARD + embedded > 0)
               gen = generate_child(type, namespace, embedded-1)
               # apply bindings
-              if type == 'CodeableConcept' && meta['valid_codes'] && meta['binding']
-                valid_codes = selectable_valid_codes(meta, namespace)
-                gen.coding.each do |c|
-                  c.system = valid_codes.keys.sample
-                  c.code = valid_codes[c.system].sample
-                  display = "#{namespace}::Definitions".constantize.get_display(c.system, c.code) if "#{namespace}::Definitions".constantize.respond_to?('get_display')
-                  c.display = display ? display : nil
-                end
-              elsif type == 'CodeableConcept' && meta['binding'] && meta['binding']['uri'] == 'http://hl7.org/fhir/ValueSet/use-context'
+              if type == 'CodeableConcept' && meta['binding'] && meta['binding']['uri'] == 'http://hl7.org/fhir/ValueSet/use-context'
                 gen.coding.each do |c|
                   c.system = 'https://www.usps.com/'
                   c.code = ['CA','TX','NY','MA','DC'].sample
                 end
-              elsif type == 'CodeableConcept' && meta['binding'] && meta['binding']['strength'] == 'required' && !meta['valid_codes'] && meta['min'] == 0
-                gen = nil # Cannot generate valid code for external required binding (e.g. LOINC/SNOMED); field is optional so safe to skip
-              elsif type == 'Coding' && meta['valid_codes'] && meta['binding']
+              elsif type == 'CodeableConcept' && meta['binding']
                 valid_codes = selectable_valid_codes(meta, namespace)
-                gen.system = valid_codes.keys.sample
-                gen.code = valid_codes[gen.system].sample
-                display = "#{namespace}::Definitions".constantize.get_display(gen.system, gen.code) if "#{namespace}::Definitions".constantize.respond_to?('get_display')
-                gen.display = display ? display : nil
+                if valid_codes && !valid_codes.empty?
+                  gen.coding.each do |c|
+                    c.system = valid_codes.keys.sample
+                    c.code = valid_codes[c.system].sample
+                    display = "#{namespace}::Definitions".constantize.get_display(c.system, c.code) if "#{namespace}::Definitions".constantize.respond_to?('get_display')
+                    c.display = display ? display : nil
+                  end
+                elsif required_binding?(meta)
+                  if meta.fetch('min', 0).zero?
+                    gen = nil
+                  else
+                    raise unselectable_binding_message(meta)
+                  end
+                end
+              elsif type == 'Coding' && meta['binding']
+                valid_codes = selectable_valid_codes(meta, namespace)
+                if valid_codes && !valid_codes.empty?
+                  gen.system = valid_codes.keys.sample
+                  gen.code = valid_codes[gen.system].sample
+                  display = "#{namespace}::Definitions".constantize.get_display(gen.system, gen.code) if "#{namespace}::Definitions".constantize.respond_to?('get_display')
+                  gen.display = display ? display : nil
+                elsif required_binding?(meta)
+                  if meta.fetch('min', 0).zero?
+                    gen = nil
+                  else
+                    raise unselectable_binding_message(meta)
+                  end
+                end
               elsif type == 'Reference'
                 gen.reference = nil
                 gen.display = "#{meta['type_profiles'].map{|x|x.split('/').last}.sample} #{gen.display}" if meta['type_profiles']
@@ -199,34 +234,56 @@ module Crucible
 
       def self.selectable_valid_codes(meta, namespace)
         valid_codes = meta['valid_codes']
-        binding_uri = meta.dig('binding', 'uri')
-        return valid_codes unless binding_uri
+        binding_uris = selectable_binding_uris(meta)
+        return valid_codes if binding_uris.empty?
 
+        @selectable_valid_codes_cache ||= {}
+        cache_key = [
+          namespace,
+          binding_uris,
+          valid_codes_fingerprint(valid_codes)
+        ]
+        return @selectable_valid_codes_cache[cache_key] if
+          @selectable_valid_codes_cache.key?(cache_key)
+
+        selectable_codes = binding_uris.filter_map do |binding_uri|
+          expansion_codes(binding_uri, namespace)
+        end.find { |codes| !codes.empty? }
+        selectable_codes ||= binding_uris.filter_map do |binding_uri|
+          SELECTABLE_CODE_FALLBACKS[binding_uri]
+        end.find { |codes| !codes.empty? }
+
+        result = if selectable_codes && valid_codes
+                   valid_codes.each_with_object({}) do |(system, codes), filtered|
+                     selectable = codes & selectable_codes.fetch(system, [])
+                     filtered[system] = selectable unless selectable.empty?
+                   end
+                 elsif selectable_codes
+                   selectable_codes
+                 else
+                   valid_codes
+                 end
+        @selectable_valid_codes_cache[cache_key] = result
+      end
+
+      def self.expansion_codes(binding_uri, namespace)
         definitions = "#{namespace}::Definitions".constantize
-        return valid_codes unless definitions.respond_to?(:expansions)
+        return unless definitions.respond_to?(:expansions)
 
         @selectable_expansion_codes_cache ||= {}
-        normalized_uri = binding_uri.sub(/\|[A-Za-z0-9.\-]+\z/, '')
-        cache_key = [namespace, normalized_uri]
-        selectable_codes = @selectable_expansion_codes_cache[cache_key]
-        unless @selectable_expansion_codes_cache.key?(cache_key)
-          value_set = definitions.expansions.find { |resource| resource['url'] == normalized_uri }
-          selectable_codes = if value_set
-                               collect_selectable_expansion_codes(
-                                 value_set.dig('expansion', 'contains'),
-                                 {}
-                               )
-                             end
-          @selectable_expansion_codes_cache[cache_key] = selectable_codes
-        end
-        return valid_codes unless selectable_codes
+        cache_key = [namespace, binding_uri]
+        return @selectable_expansion_codes_cache[cache_key] if
+          @selectable_expansion_codes_cache.key?(cache_key)
 
-        filtered_codes = valid_codes.each_with_object({}) do |(system, codes), filtered|
-          selectable = codes & selectable_codes.fetch(system, [])
-          filtered[system] = selectable unless selectable.empty?
+        value_set = definitions.expansions.find do |resource|
+          resource['url'] == binding_uri
         end
-
-        filtered_codes.empty? ? valid_codes : filtered_codes
+        @selectable_expansion_codes_cache[cache_key] = if value_set
+                                                        collect_selectable_expansion_codes(
+                                                          value_set.dig('expansion', 'contains'),
+                                                          {}
+                                                        )
+                                                      end
       end
 
       def self.collect_selectable_expansion_codes(entries, codes, inherited_system = nil)
@@ -238,6 +295,38 @@ module Crucible
           collect_selectable_expansion_codes(entry['contains'], codes, system)
         end
         codes
+      end
+
+      def self.selectable_binding_uris(meta)
+        binding = meta['binding']
+        return [] unless binding
+
+        primary = normalize_binding_uri(binding['uri'])
+        additional = binding.fetch('additional', []).filter_map do |entry|
+          normalize_binding_uri(entry['valueSet']) if entry['purpose'] == 'starter'
+        end
+        fallback = REQUIRED_BINDING_FALLBACKS[primary]
+        [primary, *additional, fallback].compact.uniq
+      end
+
+      def self.normalize_binding_uri(uri)
+        uri&.sub(/\|[A-Za-z0-9.\-]+\z/, '')
+      end
+
+      def self.valid_codes_fingerprint(valid_codes)
+        valid_codes&.map do |system, codes|
+          sorted_codes = codes.sort_by { |code| [code.class.name, code.to_s] }
+          [system, sorted_codes]
+        end&.sort_by { |system, _codes| [system.class.name, system.to_s] }
+      end
+
+      def self.required_binding?(meta)
+        meta.dig('binding', 'strength') == 'required'
+      end
+
+      def self.unselectable_binding_message(meta)
+        "No selectable codes for required binding " \
+          "#{meta.dig('binding', 'uri')} at #{meta['path']}"
       end
 
       def self.ancestor_fhir_classes(klass,namespace)
