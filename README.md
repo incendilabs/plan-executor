@@ -1,7 +1,7 @@
 # Plan Executor [![Build Status](https://travis-ci.org/fhir-crucible/plan_executor.svg?branch=master)](https://travis-ci.org/fhir-crucible/plan_executor)
 
 Plan Executor runs test suites against a FHIR server. The harness recognizes
-`DSTU2`, `STU3`, `R4`, and `R4B` versions of FHIR. Each suite declares its
+`DSTU2`, `STU3`, `R4`, `R4B`, and `R5` versions of FHIR. Each suite declares its
 supported versions explicitly; recognizing a version does not make every suite
 compatible with it.
 Commands that execute suites require this version argument; omission is an
@@ -20,37 +20,87 @@ $ bundle exec rake -T
 ## Listing Test Suites
 
 List all available Test Suites, excluding supported `TestScripts`. Pass the
-version, which can be `dstu2`, `stu3`, `r4`, or `r4b`. Only suites explicitly
-annotated for the selected version are listed.
+version, which can be `dstu2`, `stu3`, `r4`, `r4b`, or `r5`. Only suites
+explicitly annotated for the selected version are listed.
 
 ```
-$ bundle exec rake crucible:list_suites[dstu2]
-$ bundle exec rake crucible:list_suites[r4b]
+$ bundle exec rake "crucible:list_suites[dstu2]"
+$ bundle exec rake "crucible:list_suites[r4b]"
+$ bundle exec rake "crucible:list_suites[r5]"
 ```
 
 ## Executing a Test Suite
 
-Crucible tests can be executed by suite from the command-line by calling the `crucible-execute` rake task with the following parameters:
+Crucible tests can be executed by suite from the command line by calling the
+`crucible:execute` Rake task with the following parameters:
 
 * `url` the FHIR endpoint
-* `version` the FHIR version (sequence): `dstu2`, `stu3`, `r4`, or `r4b`.
+* `fhir_version` the explicit FHIR version: `dstu2`, `stu3`, `r4`, `r4b`, or
+  `r5`
 * `test` the name of the test suite (see `crucible:list_suites`)
-* `resource` (optional) limit the `test` (applicable to "ResourceTest" or "SearchTest" suites) to a given resource (e.g. "Patient")
+* `resource` (optional) limit `ResourceTest` or `SearchTest` to a resource such
+  as `Patient`
+* `output` (optional) a pipe-separated selection of `html`, `json`, and
+  `stdout`
 
-Run a R4 Suite limited by Resource
+Run an R4 Suite limited by Resource
 ```
-$ bundle exec rake crucible:execute[http://hapi.fhir.org/r4,r4,ResourceTest,Patient]
+$ bundle exec rake "crucible:execute[http://hapi.fhir.org/r4,r4,ResourceTest,Patient]"
 ```
 
 Run a STU3 Suite limited by Resource
 ```
-$ bundle exec rake crucible:execute[http://hapi.fhir.org/baseDstu3,stu3,ResourceTest,Patient]
+$ bundle exec rake "crucible:execute[http://hapi.fhir.org/baseDstu3,stu3,ResourceTest,Patient]"
 ```
 
 Run a DSTU2 Suite
 ```
-$ bundle exec rake crucible:execute[http://hapi.fhir.org/baseDstu2,dstu2,TransactionAndBatchTest]
+$ bundle exec rake "crucible:execute[http://hapi.fhir.org/baseDstu2,dstu2,TransactionAndBatchTest]"
 ```
+
+## R5 Harness Support
+
+R5 is an explicit harness version, not an alias for R4 or R4B. Registering it
+does not enable any test suite automatically. A suite is eligible for R5 only
+when its `supported_versions` includes `:r5`; listing, execution, and metadata
+generation all use that annotation. Use the listing task to discover the
+currently eligible suites:
+
+```
+$ bundle exec rake "crucible:list_suites[r5]"
+$ bundle exec rake "crucible:list_all[r5]"
+```
+
+Supply `r5` explicitly when executing an eligible suite or generating its
+metadata. Replace `EligibleSuite` with a suite returned by the listing task:
+
+```
+$ bundle exec rake "crucible:execute[https://server.example/fhir,r5,EligibleSuite]"
+$ bundle exec rake "crucible:execute_all[https://server.example/fhir,r5,html|json|stdout]"
+$ bundle exec rake "crucible:metadata[EligibleSuite,r5]"
+```
+
+FHIR TestScript tasks remain STU3-only. Passing `r5` to
+`crucible:execute_all_testscripts` or `crucible:testreport` is rejected rather
+than being routed through another FHIR version.
+
+The R5 specification navigation index is checked in at
+`lib/FHIR_structure_r5.json`. It is generated from the official
+`https://hl7.org/fhir/R5/definitions.json.zip` archive, pinned to SHA-256
+`df0d7259b4a8741d59f4971d96dd486423ecbd414c7060e9dc006ae3c3209c0c`.
+The generator verifies the checksum and reads the exact archive entry
+`profiles-resources.json`.
+
+Regenerate the checked-in index from a repository-local download:
+
+```
+$ mkdir -p tmp/r5-structure
+$ curl --fail --location --output tmp/r5-structure/r5-definitions.json.zip https://hl7.org/fhir/R5/definitions.json.zip
+$ bundle exec rake "crucible:generate_r5_structure[tmp/r5-structure/r5-definitions.json.zip]"
+$ git diff --exit-code -- lib/FHIR_structure_r5.json
+```
+
+The downloaded archive is a source input and is not committed.
 
 ## Adding a New Test Suite
 
