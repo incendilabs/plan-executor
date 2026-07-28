@@ -1,7 +1,9 @@
 require_relative '../test_helper'
 
 class FHIRStructureTest < Test::Unit::TestCase
-  STRUCTURE_VERSIONS = [:dstu2, :stu3, :r4, :r4b].freeze
+  COMMITTED_STRUCTURE_VERSIONS = [:dstu2, :stu3, :r4, :r4b, :r5].freeze
+  ABSTRACT_RESOURCES = %w[Resource DomainResource].freeze
+  R5_ABSTRACT_RESOURCES = %w[Resource DomainResource CanonicalResource MetadataResource].freeze
 
   def test_fhir_starburst_root
     structure = Crucible::FHIRStructure.get(:r4)
@@ -10,6 +12,11 @@ class FHIRStructureTest < Test::Unit::TestCase
 
   def test_fhir_starburst_root_r4b
     structure = Crucible::FHIRStructure.get(:r4b)
+    assert_equal 'FHIR', structure['name']
+  end
+
+  def test_fhir_starburst_root_r5
+    structure = Crucible::FHIRStructure.get(:r5)
     assert_equal 'FHIR', structure['name']
   end
 
@@ -24,7 +31,7 @@ class FHIRStructureTest < Test::Unit::TestCase
   end
 
   def test_no_duplicate_names_in_starburst
-    STRUCTURE_VERSIONS.each do |version|
+    COMMITTED_STRUCTURE_VERSIONS.each do |version|
       structure = Crucible::FHIRStructure.get(version)
       names = all_names(structure)
 
@@ -33,16 +40,18 @@ class FHIRStructureTest < Test::Unit::TestCase
   end
 
   def fhir_resources(fhir_version)
-    Crucible::FHIRVersion.namespace(fhir_version).const_get(:RESOURCES)
+    resources = Crucible::FHIRVersion.namespace(fhir_version).const_get(:RESOURCES)
+    abstract_resources = fhir_version == :r5 ? R5_ABSTRACT_RESOURCES : ABSTRACT_RESOURCES
+    resources.reject { |resource| abstract_resources.include?(resource) }
   end
 
   def test_no_missing_resources_in_starburst
 
-    STRUCTURE_VERSIONS.each do |version|
+    COMMITTED_STRUCTURE_VERSIONS.each do |version|
       structure = Crucible::FHIRStructure.get(version)
       resource_subset = structure['children'].select{|c| c['name'] == 'RESOURCES'}.first
       structure_resources = all_names(resource_subset, true).map{|e| e.downcase.delete(' ')}
-      model_resources = fhir_resources(version).map(&:downcase).reject{|m| m == 'resource' || m == "domainresource"}
+      model_resources = fhir_resources(version).map(&:downcase)
 
       missing_resources = model_resources - structure_resources
       extra_resources = structure_resources - model_resources
@@ -61,7 +70,7 @@ class FHIRStructureTest < Test::Unit::TestCase
 
     names = []
 
-    STRUCTURE_VERSIONS.each do |version|
+    COMMITTED_STRUCTURE_VERSIONS.each do |version|
       structure = Crucible::FHIRStructure.get(version)
       names.concat(all_names(structure).map{|e| e.downcase.delete(' ')})
     end
