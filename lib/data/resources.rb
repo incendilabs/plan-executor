@@ -3,9 +3,10 @@ module Crucible
     class Resources
 
       FIXTURE_DIR = File.join(File.expand_path(File.join('..','..','..'),File.absolute_path(__FILE__)), 'fixtures')
+      class InvalidFixtureError < StandardError; end
 
       def initialize(fhir_version)
-        @fhir_version = fhir_version
+        @fhir_version = Crucible::FHIRVersion.resolve(fhir_version)
         @namespace = Crucible::FHIRVersion.namespace(@fhir_version)
       end
 
@@ -239,14 +240,63 @@ module Crucible
 
 
       def load_fixture(path, extension)
-
         full_path = File.join(fixture_path, "#{path}.#{extension.to_s}")
         versioned_path = File.join(fixture_path, "#{path}.#{@fhir_version}.#{extension}")
         full_path = versioned_path if File.exist?(versioned_path)
-        tag_metadata(@namespace.from_contents(File.read(full_path)))
+        resource = parse_fixture(File.read(full_path), extension, full_path)
+        tag_metadata(resource)
       end
 
       private
+
+      def parse_fixture(contents, extension, full_path)
+        format = extension.to_s.downcase.to_sym
+        format_namespace = case format
+                           when :json
+                             @namespace.const_get(:Json)
+                           when :xml
+                             @namespace.const_get(:Xml)
+                           else
+                             raise ArgumentError, "Unsupported fixture format: #{extension}"
+                           end
+        resource = deserialize_fixture(format_namespace, format, contents)
+        unless resource
+          raise InvalidFixtureError,
+                "Invalid #{fixture_version_label} #{format.to_s.upcase} fixture #{full_path}: " \
+                'content did not deserialize to a FHIR resource'
+        end
+
+        errors = format == :xml ? format_namespace.validate(contents) : resource.validate
+        validation_messages = flatten_validation_messages(errors)
+        unless validation_messages.empty?
+          raise InvalidFixtureError,
+                "Invalid #{fixture_version_label} #{format.to_s.upcase} fixture #{full_path}: " \
+                "#{validation_messages.join('; ')}"
+        end
+
+        resource
+      rescue InvalidFixtureError
+        raise
+      rescue StandardError => error
+        raise InvalidFixtureError,
+              "Invalid #{fixture_version_label} #{format.to_s.upcase} fixture #{full_path}: " \
+              "#{error.message}"
+      end
+
+      def deserialize_fixture(format_namespace, format, contents)
+        return format_namespace.from_json(contents) if format == :json
+
+        format_namespace.from_xml(contents)
+      end
+
+      def flatten_validation_messages(errors)
+        values = errors.is_a?(Hash) ? errors.values.flatten : errors
+        values.map { |error| error.respond_to?(:message) ? error.message : error.to_s }
+      end
+
+      def fixture_version_label
+        @fhir_version.to_s.upcase
+      end
 
       # FIXME: Determine a better way to share fixture data with Crucible
       def fixture_path

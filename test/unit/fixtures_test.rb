@@ -34,19 +34,25 @@ class FixturesTest < Test::Unit::TestCase
   end
 
   def xml_namespace(fhir_version)
-    namespace = FHIR::Xml
-    if !fhir_version.nil? && FHIR.constants.include?(fhir_version.upcase)
-      namespace = FHIR.const_get(fhir_version.upcase)::Xml
-    end
-    namespace
+    Crucible::FHIRVersion.namespace(fhir_version).const_get(:Xml)
   end
 
   def json_namespace(fhir_version)
-    namespace = FHIR::Json
-    if !fhir_version.nil? && FHIR.constants.include?(fhir_version.upcase)
-      namespace = FHIR.const_get(fhir_version.upcase)::Json
+    Crucible::FHIRVersion.namespace(fhir_version).const_get(:Json)
+  end
+
+  def test_r5_fixture_validation_uses_r5_format_namespaces
+    assert_same FHIR::R5::Xml, xml_namespace(:r5)
+    assert_same FHIR::R5::Json, json_namespace(:r5)
+  end
+
+  def test_unknown_fixture_validation_version_is_rejected
+    error = assert_raise(Crucible::FHIRVersion::UnsupportedVersionError) do
+      json_namespace(:r6)
     end
-    namespace
+
+    assert_match(/Unsupported FHIR version 'r6'/, error.message)
+    assert_match(/dstu2, stu3, r4, r4b, r5/, error.message)
   end
 
   def run_validate(fixture, xml, version)
