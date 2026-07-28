@@ -2,7 +2,14 @@ module Crucible
   module Tests
     class BaseSuite < BaseTest
 
-      EXCLUDED_RESOURCES = ['DomainResource', 'Resource', 'Parameters', 'OperationOutcome']
+      EXCLUDED_RESOURCES = [
+        'CanonicalResource',
+        'DomainResource',
+        'MetadataResource',
+        'OperationOutcome',
+        'Parameters',
+        'Resource'
+      ].freeze
 
       def title
         self.class.name.demodulize
@@ -139,8 +146,7 @@ module Crucible
       def resource_category(resource)
         unless @resource_category
           @categories_by_resource = {}
-          fhir_version = Crucible::FHIRVersion.for_class(resource)
-          fhir_structure = Crucible::FHIRStructure.get(fhir_version)
+          fhir_structure = Crucible::FHIRStructure.for_resource(resource)
           categories = fhir_structure['children'].select {|n| n['name'] == 'RESOURCES'}.first['children']
           pull_children = lambda {|n, chain| n['children'].nil? ? n['name'] : n['children'].map {|child| chain.call(child, chain)}}
           categories.each do |category|

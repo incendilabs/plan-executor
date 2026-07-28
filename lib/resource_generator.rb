@@ -89,7 +89,7 @@ module Crucible
             gen = DateTime.now.strftime("%T")
           elsif type == 'boolean'
             gen = (SecureRandom.random_number(100) % 2 == 0)
-          elsif type == 'positiveInt' || type == 'unsignedInt' || type == 'integer'
+          elsif ['positiveInt', 'unsignedInt', 'integer', 'integer64'].include?(type)
              gen = (SecureRandom.random_number(100) + 1) # add one in case this is a "positiveInt" which must be > 0
           elsif type == 'decimal'
             gen = SecureRandom.random_number
@@ -369,7 +369,7 @@ module Crucible
 
       def self.fix_condition(resource)
         version = Crucible::FHIRVersion.for_class(resource)
-        return resource unless [:r4, :r4b].include?(version)
+        return resource unless [:r4, :r4b, :r5].include?(version)
 
         namespace = Crucible::FHIRVersion.namespace(version)
         if resource.clinicalStatus.kind_of? String
