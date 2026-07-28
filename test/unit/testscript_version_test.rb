@@ -1,7 +1,9 @@
 require_relative '../test_helper'
 require 'rake'
 
-load File.expand_path('../../lib/tasks/tasks.rake', __dir__)
+unless Rake::Task.task_defined?('crucible:execute')
+  load File.expand_path('../../lib/tasks/tasks.rake', __dir__)
+end
 
 class TestScriptVersionTest < Test::Unit::TestCase
   def test_stu3_testscript_execution_remains_supported

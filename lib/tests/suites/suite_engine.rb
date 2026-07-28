@@ -87,21 +87,23 @@ module Crucible
         puts "---"
         puts "BUILDING METADATA"
         puts "---"
-        SuiteEngine.new.tests.each do |test|
-          test_file = Crucible::Tests.const_get(test).new(nil)
+        SuiteEngine.new.tests.each do |test_file|
+          next unless test_file.supported_versions.include?(version)
+
+          test_name = test_file.class.name.demodulize
           if test_file.respond_to? 'resource_class='
             Crucible::Tests::BaseSuite.fhir_resources(version).each do |klass|
               test_file.resource_class = klass
               puts "---"
-              puts "BUILDING METADATA - #{test}#{klass}"
+              puts "BUILDING METADATA - #{test_name}#{klass.name.demodulize}"
               puts "---"
-              metadata["#{test}#{klass}"] = test_file.collect_metadata(true)
+              metadata["#{test_name}#{klass.name.demodulize}"] = test_file.collect_metadata(true)
             end
           else
             puts "---"
-            puts "BUILDING METADATA - #{test}"
+            puts "BUILDING METADATA - #{test_name}"
             puts "---"
-            metadata[test] = test_file.collect_metadata(true)
+            metadata[test_name] = test_file.collect_metadata(true)
           end
         end
         puts "---"
