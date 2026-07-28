@@ -31,12 +31,12 @@ namespace :crucible do
 
   desc 'execute all'
   task :execute_all, [:url, :fhir_version, :output] do |t, args|
-    FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     fhir_version = resolve_fhir_version(args.fhir_version)
+    FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'benchmark'
     result = {}
     b = Benchmark.measure {
-      client = FHIR::Client.new(args.url, fhir_version: fhir_version)
+      client = build_fhir_client(args.url, fhir_version)
       client.setup_security
       result = execute_all(args.url, client, args.output)
     }
@@ -47,11 +47,11 @@ namespace :crucible do
 
   desc 'execute all test scripts'
   task :execute_all_testscripts, [:url, :fhir_version, :output] do |t, args|
-    FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     fhir_version = resolve_testscript_fhir_version(args.fhir_version)
+    FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'benchmark'
     b = Benchmark.measure {
-      client = FHIR::Client.new(args.url, fhir_version: fhir_version)
+      client = build_fhir_client(args.url, fhir_version)
       client.setup_security
       results = Crucible::Tests::TestScriptEngine.new(client).execute_all
       process_results(results, args.url, args.output)
@@ -61,11 +61,11 @@ namespace :crucible do
 
   desc 'execute testscript and get testreport'
   task :testreport, [:url, :fhir_version, :test, :filename] do |t, args|
-    FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     fhir_version = resolve_testscript_fhir_version(args.fhir_version)
+    FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'benchmark'
     b = Benchmark.measure {
-      client = FHIR::Client.new(args.url, fhir_version: fhir_version)
+      client = build_fhir_client(args.url, fhir_version)
       client.setup_security
       engine = Crucible::Tests::TestScriptEngine.new(client)
       script = engine.find_test(args.test)
@@ -86,12 +86,12 @@ namespace :crucible do
 
   desc 'execute'
   task :execute, [:url, :fhir_version, :test, :resource, :output] do |t, args|
-    FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     fhir_version = resolve_fhir_version(args.fhir_version)
+    FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'benchmark'
     result = {}
     b = Benchmark.measure {
-      client = FHIR::Client.new(args.url, fhir_version: fhir_version)
+      client = build_fhir_client(args.url, fhir_version)
       client.setup_security
       result = execute_test(args.url, client, args.test, args.resource, args.output)
     }
@@ -101,10 +101,20 @@ namespace :crucible do
   end
 
   desc 'metadata'
-  task :metadata, [:test] do |t, args|
+  task :metadata, [:test, :fhir_version] do |t, args|
+    fhir_version = resolve_fhir_version(args.fhir_version)
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
+    client = build_fhir_client('http://metadata.local', fhir_version)
+    executor = Crucible::Tests::Executor.new(client)
+    test = executor.find_test(args.test)
+    raise ArgumentError, "Unable to find test: #{args.test}" unless test
+    unless eligible_for_fhir_version?(test, fhir_version)
+      raise Crucible::FHIRVersion::UnsupportedVersionError,
+            "Test #{args.test} does not support fhir version #{fhir_version}"
+    end
+
     require 'benchmark'
-    b = Benchmark.measure { puts JSON.pretty_unparse(Crucible::Tests::Executor.new(nil).extract_metadata_from_test(args.test)) }
+    b = Benchmark.measure { puts JSON.pretty_unparse(executor.extract_metadata_from_test(args.test)) }
     puts "Metadata #{args.test} completed in #{b.real} seconds."
   end
 
@@ -155,6 +165,19 @@ namespace :crucible do
           "FHIR TestScripts require STU3, got #{version}"
   end
 
+  def build_fhir_client(url, fhir_version)
+    FHIR::Client.new(url, fhir_version: resolve_fhir_version(fhir_version))
+  end
+
+  def eligible_for_fhir_version?(test, fhir_version)
+    supported_versions = if test.respond_to?(:supported_versions)
+                           test.supported_versions
+                         else
+                           test.fetch('supported_versions', [])
+                         end
+    supported_versions.include?(resolve_fhir_version(fhir_version))
+  end
+
   def execute_test(url, client, key, resourceType=nil, output=nil)
     executor = Crucible::Tests::Executor.new(client)
     test = executor.find_test(key)
@@ -162,7 +185,7 @@ namespace :crucible do
       puts "Unable to find test: #{key}"
       return
     end
-    if !test.supported_versions.include?(client.fhir_version)
+    unless eligible_for_fhir_version?(test, client.fhir_version)
       puts "Test #{key} does not support fhir version #{client.fhir_version}"
       return
     end
@@ -183,7 +206,7 @@ namespace :crucible do
     all_results = {}
     executor.tests.each do |test|
       next if test.multiserver
-      next if !test.supported_versions.include?(client.fhir_version)
+      next unless eligible_for_fhir_version?(test, client.fhir_version)
       results = executor.execute(test)
       all_results.merge! process_results(results, url, output)
     end
@@ -342,9 +365,9 @@ namespace :crucible do
 
   desc 'execute custom'
   task :execute_custom, [:test, :fhir_version, :resource_type, :output] do |t, args|
+    fhir_version = resolve_fhir_version(args.fhir_version)
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'benchmark'
-    fhir_version = resolve_fhir_version(args.fhir_version)
 
     puts "# #{args.test}"
     puts
@@ -355,7 +378,7 @@ namespace :crucible do
       puts "## #{url}"
       puts "```"
       b = Benchmark.measure {
-        client = FHIR::Client.new(url, fhir_version: fhir_version)
+        client = build_fhir_client(url, fhir_version)
         client.setup_security
         execute_test(url, client, args.test, args.resource_type, args.output)
       }
@@ -368,11 +391,11 @@ namespace :crucible do
 
   desc 'execute all custom'
   task :execute_all_custom, [:fhir_version, :output] do |t, args|
+    fhir_version = resolve_fhir_version(args.fhir_version)
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'benchmark'
-    fhir_version = resolve_fhir_version(args.fhir_version)
 
-    puts "# #{args.test}"
+    puts "# Execute All"
     puts
 
     seconds = 0.0
@@ -381,24 +404,24 @@ namespace :crucible do
       puts "## #{url}"
       puts "```"
       b = Benchmark.measure {
-        client = FHIR::Client.new(url, fhir_version: fhir_version)
+        client = build_fhir_client(url, fhir_version)
         client.setup_security
-        results = execute_all(url, client, output)
+        results = execute_all(url, client, args.output)
       }
       seconds += b.real
       puts "```"
       puts
     end
-    puts "Execute All Custom #{args.test} completed for #{FHIR_SERVERS.length} servers in #{seconds} seconds."
+    puts "Execute All Custom completed for #{FHIR_SERVERS.length} servers in #{seconds} seconds."
   end
 
   desc 'list all'
   task :list_all, [:fhir_version] do |t, args|
+    fhir_version = resolve_fhir_version(args.fhir_version)
     require 'benchmark'
     b = Benchmark.measure do 
       tests = Crucible::Tests::Executor.list_all
-
-      tests = tests.select{|k,t| t['supported_versions'].include?(resolve_fhir_version(args.fhir_version))} if !args.fhir_version.nil?
+      tests = tests.select { |_key, test| eligible_for_fhir_version?(test, fhir_version) }
 
       tests.each do |k, v| 
         puts "#{k} (#{v['supported_versions'].join(',')})"; 
@@ -411,12 +434,13 @@ namespace :crucible do
 
   desc 'list names of test suites'
   task :list_suites, [:fhir_version] do |t, args|
+    fhir_version = resolve_fhir_version(args.fhir_version)
     require 'benchmark'
     b = Benchmark.measure do
       suites = Crucible::Tests::Executor.list_all
       suite_names = []
       suites.each do |key,value|
-        suite_names << value['author'].split('::').last if !key.start_with?('TS') && (args.fhir_version.nil? || value['supported_versions'].include?(resolve_fhir_version(args.fhir_version)))
+        suite_names << value['author'].split('::').last if !key.start_with?('TS') && eligible_for_fhir_version?(value, fhir_version)
       end
       suite_names.uniq!
       suite_names.each {|x| puts "  #{x}"}
@@ -433,9 +457,9 @@ namespace :crucible do
 
   desc 'execute with requirements'
   task :execute_w_requirements, [:url, :fhir_version, :test, :resource, :html_summary] do |t, args|
+    fhir_version = resolve_fhir_version(args.fhir_version)
     FHIR.logger = Logger.new("logs/plan_executor.log", 10, 1024000)
     require 'ansi'
-    fhir_version = resolve_fhir_version(args.fhir_version)
 
     module Crucible
       module Tests
@@ -456,7 +480,7 @@ namespace :crucible do
       end
     end
 
-    client = FHIR::Client.new(args.url, fhir_version: fhir_version)
+    client = build_fhir_client(args.url, fhir_version)
     client.setup_security
     client.monitor_requirements
     test = args.test.to_sym
