@@ -32,6 +32,12 @@ module Crucible
         'SampledData' => [:origin],
         'Observation::ReferenceRange' => [:low, :high]
       }.freeze
+      R5_SAMPLED_DATA_PATTERN = /\A(?:-?\d*\.?\d+|[EUL])(?: (?:-?\d*\.?\d+|[EUL]))*\z/
+      R5_IMAGING_SELECTION_2D_SCHEMA_CODES = %w[
+        point
+        polyline
+        ellipse
+      ].freeze
       #
       # Generate a FHIR resource for the given class `klass`
       # If `embedded` is greater than zero, alledded children will also
@@ -632,9 +638,153 @@ module Crucible
         model.class.name.sub(/\A#{Regexp.escape(namespace)}::/, '')
       end
 
+      def self.apply_r5_invariants!(resource)
+        case resource
+        when FHIR::R5::UsageContext
+          ensure_serializable_choice!(
+            resource,
+            'value',
+            'valueCodeableConcept',
+            textonly_codeableconcept(
+              'Generated usage context',
+              namespace: FHIR::R5
+            )
+          )
+        when FHIR::R5::BiologicallyDerivedProduct::Property
+          ensure_serializable_choice!(
+            resource,
+            'value',
+            'valueString',
+            'Generated biologically derived product property'
+          )
+        when FHIR::R5::EvidenceVariable::Characteristic::DefinitionByTypeAndValue
+          ensure_serializable_choice!(
+            resource,
+            'value',
+            'valueId',
+            'generated-value'
+          )
+        when FHIR::R5::Group::Characteristic
+          ensure_serializable_choice!(
+            resource,
+            'value',
+            'valueBoolean',
+            true
+          )
+        when FHIR::R5::Ingredient::Substance::Strength::ReferenceStrength
+          ensure_serializable_choice!(
+            resource,
+            'strength',
+            'strengthQuantity',
+            minimal_quantity(namespace: FHIR::R5)
+          )
+        when FHIR::R5::MedicationKnowledge::StorageGuideline::EnvironmentalSetting
+          ensure_serializable_choice!(
+            resource,
+            'value',
+            'valueQuantity',
+            minimal_quantity(namespace: FHIR::R5)
+          )
+        when FHIR::R5::ServiceRequest::OrderDetail::Parameter
+          ensure_serializable_choice!(
+            resource,
+            'value',
+            'valueString',
+            'Generated service request parameter'
+          )
+        when FHIR::R5::ElementDefinition::Example
+          ensure_serializable_choice!(
+            resource,
+            'value',
+            'valueString',
+            'Generated element definition example'
+          )
+        when FHIR::R5::InventoryItem::Association
+          if !resource.quantity ||
+             !choice_value_serializable?(resource.quantity)
+            resource.quantity = FHIR::R5::Ratio.new(
+              numerator: minimal_quantity(namespace: FHIR::R5),
+              denominator: minimal_quantity(1, '1', namespace: FHIR::R5)
+            )
+          end
+        when FHIR::R5::ImagingSelection::Instance::ImageRegion2D
+          # The official R5 XSD applies its 3D enum to the 2D element.
+          unless R5_IMAGING_SELECTION_2D_SCHEMA_CODES.include?(
+            resource.regionType
+          )
+            resource.regionType = R5_IMAGING_SELECTION_2D_SCHEMA_CODES.first
+          end
+        when FHIR::R5::SampledData
+          resource.origin.comparator = nil if resource.origin
+          resource.data = '0' if resource.data &&
+                                 !R5_SAMPLED_DATA_PATTERN.match?(resource.data)
+        when FHIR::R5::TestReport::Test
+          ensure_r5_test_report_action!(resource)
+        when FHIR::R5::TestScript::Test
+          ensure_r5_test_script_action!(resource)
+        end
+        resource
+      end
+
+      def self.ensure_serializable_choice!(resource, prefix, selected_field, value)
+        fields = multiple_type_fields(resource.class).fetch(prefix).values
+        populated_fields = fields.select do |field|
+          choice_value_serializable?(resource.public_send(field))
+        end
+        if populated_fields.length == 1
+          selected = populated_fields.first
+          fields.each do |field|
+            resource.public_send("#{field}=", nil) unless field == selected
+          end
+          return resource
+        end
+
+        fields.each { |field| resource.public_send("#{field}=", nil) }
+        resource.public_send("#{selected_field}=", value)
+        resource
+      end
+
+      def self.choice_value_serializable?(value)
+        return false if value.nil?
+        return !value.to_hash.empty? if value.respond_to?(:to_hash)
+        return !value.empty? if value.respond_to?(:empty?)
+
+        true
+      end
+
+      def self.ensure_r5_test_report_action!(test)
+        return test if test.action.to_a.any? do |action|
+          choice_value_serializable?(action)
+        end
+
+        operation = FHIR::R5::TestReport::Setup::Action::Operation.new(
+          result: 'pass'
+        )
+        test.action = [
+          FHIR::R5::TestReport::Test::Action.new(operation: operation)
+        ]
+        test
+      end
+
+      def self.ensure_r5_test_script_action!(test)
+        return test if test.action.to_a.any? do |action|
+          choice_value_serializable?(action)
+        end
+
+        operation = FHIR::R5::TestScript::Setup::Action::Operation.new(
+          encodeRequestUrl: true
+        )
+        test.action = [
+          FHIR::R5::TestScript::Test::Action.new(operation: operation)
+        ]
+        test
+      end
+
       def self.apply_invariants!(resource)
         fix_codeable_reference(resource)
         clear_prohibited_observation_quantity_comparators!(resource)
+        apply_r5_invariants!(resource) if
+          Crucible::FHIRVersion.for_class(resource) == :r5
 
         case resource
         when FHIR::ActivityDefinition
