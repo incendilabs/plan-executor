@@ -7,7 +7,8 @@ class FormatSuiteTest < Test::Unit::TestCase
   FHIR_VERSIONS = {
     stu3: '3.0.2',
     r4: '4.0.1',
-    r4b: '4.3.0'
+    r4b: '4.3.0',
+    r5: '5.0.0'
   }.freeze
 
   FHIR_VERSIONS.each do |version, specification_version|
@@ -22,6 +23,7 @@ class FormatSuiteTest < Test::Unit::TestCase
     @namespace = Crucible::FHIRVersion.namespace(version)
     @client = FHIR::Client.new(BASE_URL, fhir_version: version)
     @created_patient = nil
+    @create_request_headers = []
     stub_capability_statement(specification_version)
     stub_create
     stub_reads
@@ -30,10 +32,11 @@ class FormatSuiteTest < Test::Unit::TestCase
     suite = Crucible::Tests::FormatTest.new(@client)
     tests = suite.execute.fetch('Format001')
 
-    assert_equal 22, tests.length
+    assert_equal 26, tests.length
     assert_true tests.all? { |test| test['status'] == 'pass' }, failure_summary(tests)
     assert_instance_of @namespace.const_get(:Patient), @created_patient
     assert_include suite.supported_versions, version
+    assert_r5_format_behavior if version == :r5
   end
 
   def stub_capability_statement(specification_version)
@@ -54,6 +57,7 @@ class FormatSuiteTest < Test::Unit::TestCase
 
   def stub_create
     stub_request(:post, "#{BASE_URL}/Patient").to_return do |request|
+      @create_request_headers << request.headers
       @created_patient = @namespace.from_contents(request.body)
       @created_patient.id = PATIENT_ID
       @created_patient.meta ||= @namespace.const_get(:Meta).new
@@ -69,6 +73,33 @@ class FormatSuiteTest < Test::Unit::TestCase
         }
       }
     end
+  end
+
+  def assert_r5_format_behavior
+    assert_equal FHIR::Formats::ResourceFormat::RESOURCE_JSON, @create_request_headers.first['Accept']
+    assert_equal "#{FHIR::Formats::ResourceFormat::RESOURCE_JSON};charset=utf-8",
+                 @create_request_headers.first['Content-Type']
+
+    [
+      FHIR::Formats::ResourceFormat::RESOURCE_JSON,
+      FHIR::Formats::ResourceFormat::RESOURCE_XML
+    ].each do |format|
+      patient = @namespace.const_get(:Patient).new(name: [{ family: 'Format' }])
+      reply = @client.create(patient, {}, format)
+
+      assert_equal 201, reply.code
+      assert_instance_of @namespace.const_get(:Patient), reply.resource
+      assert_equal "#{format};charset=utf-8", @create_request_headers.last['Content-Type']
+    end
+
+    json_reply = @client.read(@namespace.const_get(:Patient), PATIENT_ID,
+                              FHIR::Formats::ResourceFormat::RESOURCE_JSON)
+    xml_reply = @client.read(@namespace.const_get(:Patient), PATIENT_ID,
+                             FHIR::Formats::ResourceFormat::RESOURCE_XML)
+
+    assert_instance_of FHIR::R5::Patient, json_reply.resource
+    assert_instance_of FHIR::R5::Patient, xml_reply.resource
+    assert_true json_reply.resource.equals?(xml_reply.resource, ['id'])
   end
 
   def stub_reads

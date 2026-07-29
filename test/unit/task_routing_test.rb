@@ -44,11 +44,11 @@ class TaskRoutingTest < Test::Unit::TestCase
 
   def test_r5_custom_execution_rejects_an_unaudited_suite
     execute_output = capture_stdout do
-      invoke_task('crucible:execute_custom', 'FormatTest', 'r5')
+      invoke_task('crucible:execute_custom', 'SearchTest', 'r5')
     end
 
     assert_match(/does not support fhir version r5/, execute_output)
-    assert_match(/Execute Custom FormatTest completed/, execute_output)
+    assert_match(/Execute Custom SearchTest completed/, execute_output)
   end
 
   def test_unknown_and_omitted_task_versions_fail_before_client_construction
@@ -86,7 +86,7 @@ class TaskRoutingTest < Test::Unit::TestCase
       eligible_for_fhir_version?(test, :r5)
     end.keys.map { |name| name.start_with?('ResourceTest') ? 'ResourceTest' : name }.uniq.sort
 
-    assert_equal %w[HistoryTest ReadTest ResourceTest], executable_suites
+    assert_equal %w[FormatTest HistoryTest ReadTest ResourceTest], executable_suites
     assert_equal executable_suites, listed_suites
   end
 
@@ -99,16 +99,18 @@ class TaskRoutingTest < Test::Unit::TestCase
     end
     assert_match(/ResourceTest/, listing_output)
     assert_match(/ResourceTest/, suite_listing_output)
-    assert_no_match(/FormatTest/, listing_output)
-    assert_no_match(/FormatTest/, suite_listing_output)
+    assert_match(/FormatTest/, listing_output)
+    assert_match(/FormatTest/, suite_listing_output)
+    assert_no_match(/SearchTest/, listing_output)
+    assert_no_match(/SearchTest/, suite_listing_output)
   end
 
   def test_r5_metadata_task_rejects_an_unaudited_suite
     error = assert_raise(Crucible::FHIRVersion::UnsupportedVersionError) do
-      invoke_task('crucible:metadata', 'FormatTest', 'r5')
+      invoke_task('crucible:metadata', 'SearchTest', 'r5')
     end
 
-    assert_match(/Test FormatTest does not support fhir version r5/, error.message)
+    assert_match(/Test SearchTest does not support fhir version r5/, error.message)
   end
 
   def test_testscript_tasks_remain_stu3_only

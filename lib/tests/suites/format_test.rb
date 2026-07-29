@@ -2,9 +2,9 @@ module Crucible
   module Tests
     class FormatTest < BaseSuite
 
-        @@xml_format_params = ['xml', 'text/xml', 'application/xml', 'XML_FORMAT']
-        @@json_format_params = ['json', 'application/json', 'JSON_FORMAT']
-        @@alpha = ['A', 'B', 'C', 'D']
+        @@xml_format_params = ['xml', 'text/xml', 'application/xml', 'application/fhir+xml', 'XML_FORMAT']
+        @@json_format_params = ['json', 'application/json', 'application/fhir+json', 'JSON_FORMAT']
+        @@alpha = ['A', 'B', 'C', 'D', 'E']
 
       def id
         'Format001'
@@ -16,7 +16,7 @@ module Crucible
 
       def initialize(client1, client2=nil)
         super(client1, client2)
-        @supported_versions = [:dstu2, :stu3, :r4, :r4b]
+        @supported_versions = [:dstu2, :stu3, :r4, :r4b, :r5]
         if client1&.fhir_version == :dstu2
           @xml_format = FHIR::Formats::ResourceFormat::RESOURCE_XML_DSTU2
           @json_format = FHIR::Formats::ResourceFormat::RESOURCE_JSON_DSTU2
@@ -81,7 +81,7 @@ module Crucible
         begin
           patient = request_entry(get_resource(:Patient), @id, @xml_format)
           assert compare_response_format(patient, @xml_format), "XML format header mismatch: requested #{@xml_format}, received #{patient.response_format}"
-          warning { assert compare_response(patient), 'requested XML response does not match created resource' }
+          assert_response_matches(patient, 'requested XML response does not match created resource')
         rescue => e
           raise AssertionException.new("CTO1 - Failed to handle XML format header response. Error: #{e.message}")
         end
@@ -103,7 +103,7 @@ module Crucible
             wire_format = @json_format if format == 'JSON_FORMAT'
             patient = request_entry(get_resource(:Patient), @id, wire_format, true)
             assert compare_response_format(patient, @xml_format), "XML format param mismatch: requested #{format}, received #{patient.response_format}"
-            warning { assert compare_response(patient), 'requested XML response does not match created resource' }
+            assert_response_matches(patient, 'requested XML response does not match created resource')
           rescue => e
             @client.use_format_param = false
             raise AssertionException.new("CTO2 - Failed to handle XML format param response. Error: #{e.message}")
@@ -123,7 +123,7 @@ module Crucible
         begin
           patient = request_entry(get_resource(:Patient), @id, @json_format)
           assert compare_response_format(patient, @json_format), "JSON format header mismatch: requested #{@json_format}, received #{patient.response_format}"
-          warning { assert compare_response(patient), 'requested JSON resource does not match created resource' }
+          assert_response_matches(patient, 'requested JSON resource does not match created resource')
         rescue => e
           raise AssertionException.new("CTO3 - Failed to handle JSON format header response. Error: #{e.message}")
         end
@@ -145,7 +145,7 @@ module Crucible
             wire_format = @json_format if format == 'JSON_FORMAT'
             patient = request_entry(get_resource(:Patient), @id, wire_format, true)
             assert compare_response_format(patient, @json_format), "JSON format param mismatch: requested #{wire_format}, received #{patient.response_format}"
-            warning { assert compare_response(patient), 'requested JSON response does not match created resource' }
+            assert_response_matches(patient, 'requested JSON response does not match created resource')
           rescue => e
             @client.use_format_param = false
             raise AssertionException.new("CTO4 - Failed to handle JSON format param response. Error: #{e.message}")
@@ -168,7 +168,7 @@ module Crucible
 
           assert compare_response_format(patient_xml, @xml_format), "XML format header mismatch: requested #{@xml_format}, received #{patient_xml.response_format}"
           assert compare_response_format(patient_json, @json_format), "JSON format header mismatch: requested #{@json_format}, received #{patient_json.response_format}"
-          warning { assert compare_entries(patient_xml, patient_json), 'requested XML & JSON resources do not match created resource or each other' }
+          assert_entries_match(patient_xml, patient_json, 'requested XML & JSON resources do not match created resource or each other')
         rescue => e
           @client.use_format_param = false
           raise AssertionException.new("FT01 - Failed to handle XML & JSON header param response. Error: #{e.message}")
@@ -190,7 +190,7 @@ module Crucible
 
           assert compare_response_format(patient_xml, @xml_format), "XML format header mismatch: requested #{@xml_format}, received #{patient_xml.response_format}"
           assert compare_response_format(patient_json, @json_format), "JSON format header mismatch: requested #{@json_format}, received #{patient_json.response_format}"
-          warning { assert compare_entries(patient_xml, patient_json), 'requested XML & JSON responses do not match created resource or each other' }
+          assert_entries_match(patient_xml, patient_json, 'requested XML & JSON responses do not match created resource or each other')
         rescue => e
           @client.use_format_param = false
           raise AssertionException.new("FT02 - Failed to handle XML & JSON format param response. Error: #{e.message}")
@@ -343,6 +343,22 @@ module Crucible
       # Compare two requested entries
       def compare_entries(entry1, entry2)
         compare_response(entry1) && compare_response(entry2) && entry1.resource.equals?(entry2.resource,['id'])
+      end
+
+      def assert_response_matches(entry, message)
+        if fhir_version == :r5
+          assert compare_response(entry), message
+        else
+          warning { assert compare_response(entry), message }
+        end
+      end
+
+      def assert_entries_match(entry1, entry2, message)
+        if fhir_version == :r5
+          assert compare_entries(entry1, entry2), message
+        else
+          warning { assert compare_entries(entry1, entry2), message }
+        end
       end
 
       # Unify resource requests and format specification

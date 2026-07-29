@@ -383,3 +383,42 @@ The complete unit suite command was:
 bundle exec ruby -Itest -e \
   'Dir["test/unit/**/*_test.rb"].sort.each { |file| require File.expand_path(file) }'
 ```
+
+## Task 7D: Format Suite Verification
+
+Verification performed: 2026-07-29.
+
+`FormatTest` now explicitly advertises `:r5`. The R5 audit adds the canonical
+R5 `_format` values `application/fhir+xml` and `application/fhir+json` while
+retaining the existing generic XML/JSON aliases and the DSTU2-specific MIME
+selection. R5 response equality is strict: it ignores only server-managed
+`id`, `meta.versionId`, and `meta.lastUpdated` fields. DSTU2, STU3, R4, and
+R4B retain the prior warning-only comparison behavior.
+
+The existing `FormatSuiteTest` matrix ran under rbenv Ruby 3.4.9 using the
+visible `tmp/task-7b/Gemfile` local-path dependencies. It covers STU3, R4,
+R4B, and R5 without changing the legacy cases; the added canonical R5 aliases
+raise the suite total from 22 to 26 cases for every version.
+
+| Verification | Result |
+| --- | --- |
+| `test/unit/format_suite_test.rb` | 4 tests, 27 assertions, 0 failures, 0 errors, 0 omissions |
+| `test/unit/supported_versions_test.rb` | 8 tests, 11 assertions, 0 failures, 0 errors, 0 omissions |
+| `test/unit/task_routing_test.rb` | 9 tests, 33 assertions, 0 failures, 0 errors, 0 omissions |
+| R5 `FormatTest` endpoint run | 26 pass, 0 fail, 0 error, 0 skip |
+| R5 default/JSON/XML POST content-type probe | 3 created `FHIR::R5::Patient` resources, each `201 Created` |
+
+The endpoint suite ran against the user-built
+`sparkfhir/spark:r5-latest` and `sparkfhir/mongo:r5-latest` images using the
+local-source Task 6G image `incendi/plan_executor:r5-task-6g-local`. It
+verified header negotiation, generic and canonical `_format` values, XML and
+JSON Bundle responses, cross-format resource equivalence, and the expected
+`406 Not Acceptable` behavior for unsupported Accept and `_format` values.
+The direct probe additionally verified default JSON, explicit JSON, and
+explicit XML `Content-Type` values end-to-end; each response parsed as
+`FHIR::R5::Patient`.
+
+Raw endpoint logs and the retained probe are under `tmp/task-7d/` and are not
+committed. The endpoint image source snapshot intentionally omits `.git`
+metadata, which accounts for its non-fatal `not a git repository` startup
+diagnostics.
