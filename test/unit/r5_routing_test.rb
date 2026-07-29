@@ -90,6 +90,15 @@ class R5RoutingTest < Test::Unit::TestCase
     assert_instance_of FHIR::R5::Coding, condition.verificationStatus.coding.first
   end
 
+  def test_minimal_condition_includes_r5_clinical_and_verification_statuses
+    condition = Crucible::Tests::ResourceGenerator.minimal_condition(namespace: FHIR::R5)
+
+    assert_instance_of FHIR::R5::CodeableConcept, condition.clinicalStatus
+    assert_equal 'active', condition.clinicalStatus.coding.first.code
+    assert_instance_of FHIR::R5::CodeableConcept, condition.verificationStatus
+    assert_equal 'confirmed', condition.verificationStatus.coding.first.code
+  end
+
   def test_r5_resource_ownership_selects_the_r5_structure
     r5_structure = Crucible::FHIRStructure.for_resource(FHIR::R5::ActorDefinition)
     r4b_structure = Crucible::FHIRStructure.for_resource(FHIR::R4B::Citation)

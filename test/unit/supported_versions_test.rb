@@ -50,13 +50,13 @@ class SupportedVersionsTest < Test::Unit::TestCase
     assert_equal R4B_CAPABLE_SUITE_CLASSES, r4b_suite_classes
   end
 
-  def test_only_audited_read_and_history_suites_are_enabled_for_r5
+  def test_only_audited_suites_are_enabled_for_r5
     suites = Crucible::Tests::SuiteEngine.new.tests
     r5_suite_classes = suites.select { |suite| suite.supported_versions.include?(:r5) }
                             .map { |suite| suite.class.name.demodulize }
                             .sort
 
-    assert_equal %w[FormatTest HistoryTest ReadTest ResourceTest], r5_suite_classes
+    assert_equal %w[FormatTest HistoryTest ReadTest ResourceTest TransactionAndBatchTest], r5_suite_classes
   end
 
   def test_r5_listing_and_execution_eligibility_match_the_audited_suites
@@ -71,7 +71,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
       name.start_with?('ResourceTest') ? 'ResourceTest' : name
     end.uniq.sort
 
-    assert_equal %w[FormatTest HistoryTest ReadTest ResourceTest], r5_executable_suites
+    assert_equal %w[FormatTest HistoryTest ReadTest ResourceTest TransactionAndBatchTest], r5_executable_suites
     assert_equal r5_executable_suites, r5_listed_suite_classes
   end
 

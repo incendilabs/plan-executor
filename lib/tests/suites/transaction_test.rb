@@ -12,7 +12,7 @@ module Crucible
 
       def initialize(client1, client2=nil)
         super(client1, client2)
-        @supported_versions = [:dstu2, :stu3, :r4, :r4b]
+        @supported_versions = [:dstu2, :stu3, :r4, :r4b, :r5]
         @category = {id: 'core_functionality', title: 'Core Functionality'}
       end
 
@@ -92,7 +92,7 @@ module Crucible
 
         assert( ((200..299).include?(reply.code)), "Unexpected status code: #{reply.code}" )
         warning{ assert_response_ok(reply) }
-        assert_bundle_response(reply)
+        assert_transaction_bundle_response(reply)
         assert_bundle_transactions_okay(reply)
 
         # set the IDs to whatever the server created
@@ -150,7 +150,7 @@ module Crucible
 
         assert( ((200..299).include?(reply.code)), "Unexpected status code: #{reply.code}" )
         warning{ assert_response_ok(reply) }
-        assert_bundle_response(reply)
+        assert_transaction_bundle_response(reply)
         assert_bundle_transactions_okay(reply)
 
         # set the IDs to whatever the server created
@@ -198,7 +198,7 @@ module Crucible
 
         assert( ((200..299).include?(reply.code)), "Unexpected status code: #{reply.code}" )
         warning{ assert_response_ok(reply) }
-        assert_bundle_response(reply)
+        assert_transaction_bundle_response(reply)
         assert_bundle_transactions_okay(reply)
 
         # set the IDs to whatever the server created
@@ -279,7 +279,7 @@ module Crucible
 
         assert( ((200..299).include?(reply.code)), "Unexpected status code: #{reply.code}" )
         warning{ assert_response_ok(reply) }
-        assert_bundle_response(reply)
+        assert_transaction_bundle_response(reply)
         assert_bundle_transactions_okay(reply)
 
         count = (reply.resource.entry.first.resource.total rescue 0)
@@ -324,7 +324,7 @@ module Crucible
 
         assert( ((200..299).include?(reply.code)), "Unexpected status code: #{reply.code}" )
         warning{ assert_response_ok(reply) }
-        assert_bundle_response(reply)
+        assert_transaction_bundle_response(reply)
         assert_bundle_transactions_okay(reply)
 
         # get the new IDs
@@ -388,7 +388,7 @@ module Crucible
 
         assert( ((200..299).include?(reply.code)), "Unexpected status code: #{reply.code}" )
         warning{ assert_response_ok(reply) }
-        assert_bundle_response(reply)
+        assert_transaction_bundle_response(reply)
         assert_bundle_transactions_okay(reply)
       end
 
@@ -421,7 +421,7 @@ module Crucible
 
         assert( ((200..299).include?(reply.code)), "Unexpected status code: #{reply.code}" )
         warning{ assert_response_ok(reply) }
-        assert_bundle_response(reply)
+        assert_transaction_bundle_response(reply)
         assert_bundle_transactions_okay(reply)
       end
 
@@ -453,7 +453,7 @@ module Crucible
         @client.add_batch_request('POST',nil,@batch_obs).fullUrl = "urn:uuid:#{SecureRandom.uuid}"
         reply = @client.end_batch
         
-        assert_bundle_response(reply)
+        assert_batch_bundle_response(reply)
         assert_equal(2, reply.resource.entry.length, "Expected 2 Bundle entries but found #{reply.resource.entry.length}.", reply.body)
 
         patientCode = reply.resource.entry[0].try(:response).try(:status).try(:split).try(:first).try(:to_i)
@@ -503,7 +503,7 @@ module Crucible
 
         assert( ((200..299).include?(reply.code)), "Unexpected status code: #{reply.code}" )
         warning{ assert_response_ok(reply) }
-        assert_bundle_response(reply)
+        assert_batch_bundle_response(reply)
 
          # set the IDs to whatever the server created
         @batch_obs_2.id = FHIR::ResourceAddress.pull_out_id('Observation',reply.resource.entry[0].try(:response).try(:location))
@@ -544,7 +544,7 @@ module Crucible
 
         assert( ((200..299).include?(reply.code)), "Unexpected status code: #{reply.code}" )
         warning{ assert_response_ok(reply) }
-        assert_bundle_response(reply)
+        assert_batch_bundle_response(reply)
         assert_bundle_transactions_okay(reply)
       end
 
@@ -578,7 +578,17 @@ module Crucible
         reply = @client.end_transaction
 
         assert( ((200..299).include?(reply.code)), "Transaction with matching IfMatch should succeed, got: #{reply.code}" )
+        assert_transaction_bundle_response(reply)
+      end
+
+      def assert_transaction_bundle_response(reply)
         assert_bundle_response(reply)
+        assert_equal 'transaction-response', reply.resource.type
+      end
+
+      def assert_batch_bundle_response(reply)
+        assert_bundle_response(reply)
+        assert_equal 'batch-response', reply.resource.type
       end
 
       # Transaction PUT with non-matching IfMatch should fail

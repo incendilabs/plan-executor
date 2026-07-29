@@ -422,3 +422,41 @@ Raw endpoint logs and the retained probe are under `tmp/task-7d/` and are not
 committed. The endpoint image source snapshot intentionally omits `.git`
 metadata, which accounts for its non-fatal `not a git repository` startup
 diagnostics.
+
+## Task 7E: Transaction And Batch Suite Verification
+
+Verification performed: 2026-07-29.
+
+`TransactionAndBatchTest` now explicitly advertises `:r5`. Transaction
+assertions require `transaction-response` and batch assertions require
+`batch-response` across every supported FHIR version. The generator now
+supplies the mandatory R5
+`Condition.clinicalStatus` alongside `verificationStatus`, using the selected
+FHIR namespace for both R4B and R5 models.
+
+`R5TransactionSuiteTest` verifies R5 request construction and parsing for
+POST, PUT, DELETE, GET search, conditional create, conditional update,
+temporary `urn:uuid` references, failure `OperationOutcome` handling, and
+transaction/batch response Bundle distinctions. Its recursive namespace check
+rejects response graphs containing non-R5 model instances.
+
+| Verification | Result |
+| --- | --- |
+| `test/unit/r5_transaction_suite_test.rb` | 3 tests, 53 assertions, 0 failures, 0 errors |
+| R5 `TransactionAndBatchTest` endpoint run | 8 pass, 0 fail, 0 error, 5 existing Spark issue skips |
+| Independent R5 batch endpoint probe | `200 OK`, `batch-response`, 2 `201 Created` response entries, both `FHIR::R5::Observation` |
+
+The endpoint run used the clean local Spark master image containing Spark
+commit `955b25e7` (`Engine: Return correct bundle response for
+batch/transaction bundles`), plus `sparkfhir/mongo:r5-latest`. The Spark fix
+applies to batch and transaction responses across all supported FHIR versions;
+this audit verifies its R5 behavior. The five skips remain linked to existing
+Spark issues: XFER4, XFER11, and XFER12 (`#305`), XFER5 (`#304`), and XFER10
+(`#306`). The independent batch probe is retained because those historical
+batch cases remain skipped; it verifies that a live two-entry R5 batch now
+returns one `batch-response` entry per submitted create.
+
+Raw endpoint logs and the retained probe are under `tmp/task-7e/` and are not
+committed. As with prior local-source endpoint runs, the image source snapshot
+omits `.git` metadata, causing non-fatal `not a git repository` diagnostics at
+startup.
