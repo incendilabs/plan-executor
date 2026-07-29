@@ -31,6 +31,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
 
     assert_equal expected + [:r5], Crucible::Tests::ResourceTest.new(nil).supported_versions
     assert_equal expected + [:r5], Crucible::Tests::SearchTest.new(nil).supported_versions
+    assert_equal expected + [:r5], Crucible::Tests::SprinklerSearchTest.new(nil).supported_versions
     assert_equal expected.drop(1) + [:r5], Crucible::Tests::RobustSearchTest.new(nil).supported_versions
   end
 
@@ -57,7 +58,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
                             .map { |suite| suite.class.name.demodulize }
                             .sort
 
-    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest TransactionAndBatchTest], r5_suite_classes
+    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest SprinklerSearchTest TransactionAndBatchTest], r5_suite_classes
   end
 
   def test_r5_listing_and_execution_eligibility_match_the_audited_suites
@@ -78,7 +79,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
       end
     end.uniq.sort
 
-    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest TransactionAndBatchTest], r5_executable_suites
+    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest SprinklerSearchTest TransactionAndBatchTest], r5_executable_suites
     assert_equal r5_executable_suites, r5_listed_suite_classes
   end
 

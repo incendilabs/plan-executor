@@ -236,6 +236,44 @@ behaviors remain in scope for Task 7H. `RobustSearchTest` contains only the
 MPI `$match` case, which remains an explicit skip for
 [Spark issue #310](https://github.com/FirelyTeam/spark/issues/310).
 
+## Task 7H: Sprinkler Search Suite Verification
+
+Verification performed: 2026-07-29.
+
+`SprinklerSearchTest` now explicitly advertises `:r5`. Its setup resources
+have unique patient names, identifiers, and Observation codes. Each creation
+waits for its resource to become searchable through `_id` before test
+execution continues. The suite now compares exact resource ID sets and Bundle
+totals without relying on entry order or unrelated endpoint data.
+
+Quantity searches use the full UCUM system and code form, and combine a
+unique Observation `code` token with `value-quantity` to keep the precision
+and comparator result sets isolated. R5 definitions are covered for the
+Patient string/token parameters, Condition reference parameter, Observation
+token/quantity parameters, and generic `_id` token.
+
+| Verification | Result |
+| --- | --- |
+| `R5SprinklerSearchSuiteTest`, `SupportedVersionsTest`, and `TaskRoutingTest` | 20 tests, 80 assertions, 0 failures, 0 errors |
+| R5 `SprinklerSearchTest` endpoint run | 36 pass, 0 fail, 0 error, 2 explicit Spark #307 skips |
+| R4B `SprinklerSearchTest` regression endpoint run | 36 pass, 0 fail, 0 error, 2 explicit Spark #307 skips |
+
+The endpoint checks used `incendi/plan_executor:r5-task7h-local-deps` with the
+current suite file mounted, no-cache builds of `sparkfhir/spark:r5-task7h-local`
+and `sparkfhir/spark:r4b-task7h-local`, and isolated R4B/R5 Spark and Mongo
+containers. Raw logs remain under
+`tmp/task-7h/` and are not committed.
+
+R5 `Condition:patient` `_include` initially returned only the primary
+Condition. Spark's include resolver depended on generated `SearchParameter.Path`
+metadata, but the Firely R5 model provides FHIRPath expressions and no paths or
+XPaths. Spark now evaluates the selected search parameter expression with the same
+`ResourceResolver` and FHIRPath symbol-table setup used by indexing. The R5
+regression test proves that the empty-path `Condition:patient` definition includes
+the referenced Patient.
+`_revinclude` remains the pre-existing explicit
+[Spark issue #307](https://github.com/FirelyTeam/spark/issues/307) skip.
+
 ## Task 7C: Resource Suite Verification
 
 Verification performed: 2026-07-29.
