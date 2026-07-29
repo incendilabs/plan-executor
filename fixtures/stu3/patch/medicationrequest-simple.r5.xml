@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MedicationRequest xmlns="http://hl7.org/fhir">
+  <language value="en-US"/>
+  <status value="active"/>
+  <intent value="order"/>
+  <medication>
+    <concept>
+      <text value="medication name"/>
+    </concept>
+  </medication>
+  <subject>
+    <display value="example"/>
+  </subject>
+</MedicationRequest>

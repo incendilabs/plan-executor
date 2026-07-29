@@ -14,7 +14,7 @@ module Crucible
         super(client1, client2)
         @tags.append('fhirpath')
         @category = { id: 'fhirpath', title: 'FHIRPath' }
-        @supported_versions = [:stu3, :r4, :r4b]
+        @supported_versions = [:stu3, :r4, :r4b, :r5]
       end
 
       def setup
@@ -101,15 +101,12 @@ module Crucible
             validates resource: 'MedicationRequest', methods: ['read']
           }
 
-          skip 'TODO: Issue link (conditional patch - see http://www.hl7.org/fhir/R4/http.html#concurrency)'
-
           assert(!@previous_version_id.nil?, "VersionId of Existing Medication Request not returned in C12PATCH_1_(#{fmt}).")
 
           patchset = patchset_resource("replace", "MedicationRequest.status", nil, "active")
 
-          # http://hl7.org/fhir/2016Sep/http.html#2.42.0.2
-          # According to the FHIR spec, the If-Match eTag for version id should be weak.
-          additional_headers = { 'If-Match' => "\"#{@previous_version_id}\"" }
+          # According to the FHIR spec, the If-Match ETag for a version id is weak.
+          additional_headers = { 'If-Match' => "W/\"#{@previous_version_id}\"" }
 
           medication_request = get_resource(:MedicationRequest)
           reply = @client.fhir_patch(medication_request, @medication_order_id, patchset, {}, resource_format(fmt), additional_headers)
