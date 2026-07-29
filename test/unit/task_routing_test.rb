@@ -36,10 +36,12 @@ class TaskRoutingTest < Test::Unit::TestCase
 
   def test_r5_task_clients_construct_and_audited_suites_are_eligible
     client = build_fhir_client('http://r5.example', 'r5')
+    patch_test = Crucible::Tests::Executor.new(client).find_test('FhirPathPatchTest')
     resource_test = Crucible::Tests::Executor.new(client).find_test('ResourceTest')
     transaction_test = Crucible::Tests::Executor.new(client).find_test('TransactionAndBatchTest')
 
     assert_equal :r5, client.fhir_version
+    assert_true eligible_for_fhir_version?(patch_test, :r5)
     assert_true eligible_for_fhir_version?(resource_test, :r5)
     assert_true eligible_for_fhir_version?(transaction_test, :r5)
   end
@@ -88,7 +90,7 @@ class TaskRoutingTest < Test::Unit::TestCase
       eligible_for_fhir_version?(test, :r5)
     end.keys.map { |name| name.start_with?('ResourceTest') ? 'ResourceTest' : name }.uniq.sort
 
-    assert_equal %w[FormatTest HistoryTest ReadTest ResourceTest TransactionAndBatchTest], executable_suites
+    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest TransactionAndBatchTest], executable_suites
     assert_equal executable_suites, listed_suites
   end
 
@@ -103,6 +105,8 @@ class TaskRoutingTest < Test::Unit::TestCase
     assert_match(/ResourceTest/, suite_listing_output)
     assert_match(/FormatTest/, listing_output)
     assert_match(/FormatTest/, suite_listing_output)
+    assert_match(/FhirPathPatchTest/, listing_output)
+    assert_match(/FhirPathPatchTest/, suite_listing_output)
     assert_match(/TransactionAndBatchTest/, listing_output)
     assert_match(/TransactionAndBatchTest/, suite_listing_output)
     assert_no_match(/SearchTest/, listing_output)

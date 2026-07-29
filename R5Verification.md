@@ -460,3 +460,37 @@ Raw endpoint logs and the retained probe are under `tmp/task-7e/` and are not
 committed. As with prior local-source endpoint runs, the image source snapshot
 omits `.git` metadata, causing non-fatal `not a git repository` diagnostics at
 startup.
+
+## Task 7F: FHIRPath Patch Suite Verification
+
+Verification performed: 2026-07-29.
+
+`FhirPathPatchTest` now explicitly advertises `:r5`. Its R5 fixture uses the
+required `MedicationRequest.medication` `CodeableReference` rather than the
+STU3 `medicationCodeableConcept` representation. The PATCH client uses the
+requested format for both the Parameters body and `Accept` header, so JSON and
+XML patch requests negotiate matching JSON and XML representations.
+
+`R5FhirPathPatchSuiteTest` executes the suite lifecycle with an R5 client and
+verifies R5 Parameters construction, JSON/XML round trips, choice-element
+syntax, version changes, and stale-version rejection without a resource
+mutation. The stale assertion sends the correct weak ETag form,
+`If-Match: W/"[versionId]"`, and accepts the specification-valid `409` or
+`412` result.
+
+| Verification | Result |
+| --- | --- |
+| `test/unit/r5_fhirpath_patch_suite_test.rb` | 3 tests, 57 assertions, 0 failures, 0 errors |
+| R5 `FhirPathPatchTest` endpoint run | 6 pass, 0 fail, 0 error, 0 skip |
+| Live version-aware probe | Matching `W/"1"`: `200`; stale `W/"1"`: `409 Conflict` with `FHIR::R5::OperationOutcome`; final status `completed`, final version `2` |
+
+The endpoint evidence uses a local R5 Spark image built from the shared engine
+change that validates the versioned PATCH key before applying the patch. That
+change sits in `Libraries/Spark.Engine/Service/FhirService.cs`, so the same
+behavior applies to the STU3, R4, R4B, and R5 Spark applications. The R5
+endpoint used `sparkfhir/mongo:r5-latest` and the Task 6G local-source harness
+image.
+
+Raw endpoint logs and the retained probe are under `tmp/task-7f/` and are not
+committed. The harness source snapshot omits `.git` metadata, causing its
+non-fatal `not a git repository` diagnostics at startup.

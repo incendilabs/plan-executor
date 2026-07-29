@@ -55,6 +55,7 @@ module FHIR
       options = { resource: klass, id: id, format: format }.merge options
       headers = {}
       headers[:content_type] = "#{format}"
+      headers[:accept] = format
       headers[:prefer] = @return_preference if @use_return_preference
       headers.merge!(additional_header)
       if format == FHIR::Formats::ResourceFormat::RESOURCE_XML
