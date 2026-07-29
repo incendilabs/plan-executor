@@ -15,7 +15,7 @@ R4B compatibility is not evidence of R5 compatibility. Every entry began as
 | `FormatTest` | DSTU2, STU3, R4, R4B | unaudited | R5 media-type and serialization behavior has not been audited. | Same inventory test |
 | `HistoryTest` | DSTU2, STU3, R4, R4B, R5 | compatible | R5 history, vread, deleted-resource, and error-response behavior audited; targeted R5 endpoint run passed. | `R5ReadHistorySuiteTest`; `TaskRoutingTest#test_r5_eligibility_is_limited_to_audited_suites`; `tmp/task-7b/HistoryTestEndpoint.log` |
 | `ReadTest` | DSTU2, STU3, R4, R4B, R5 | compatible | R5 read, conditional-read, response parsing, and lifecycle setup audited; targeted R5 endpoint run passed. | `R5ReadHistorySuiteTest`; `TaskRoutingTest#test_r5_eligibility_is_limited_to_audited_suites`; `tmp/task-7b/ReadTestEndpoint.log` |
-| `ResourceTest` | DSTU2, STU3, R4, R4B | unaudited | R5 resource coverage and interaction behavior have not been audited. | Same inventory test |
+| `ResourceTest` | DSTU2, STU3, R4, R4B, R5 | compatible | R5 structure expansion, generated/parsing namespace ownership, and representative unchanged, changed, and R5-only endpoint cases audited. | `R5ResourceSuiteTest`; `tmp/task-7c` endpoint cases; `fhir_models` `67c146c4` |
 | `RobustSearchTest` | STU3, R4, R4B | unaudited | R5 robust-search expectations have not been audited. | Same inventory test |
 | `SearchTest` | DSTU2, STU3, R4, R4B | unaudited | R5 search semantics have not been audited. | Same inventory test |
 | `SprinklerSearchTest` | DSTU2, STU3, R4, R4B | unaudited | R5 sprinkler-search behavior has not been audited. | Same inventory test |

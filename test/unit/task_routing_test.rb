@@ -34,30 +34,21 @@ class TaskRoutingTest < Test::Unit::TestCase
     end
   end
 
-  def test_r5_execute_and_execute_all_construct_clients_without_enabling_suites
-    execute_output = capture_stdout do
-      invoke_task('crucible:execute', 'http://r5.example', 'r5', 'ResourceTest')
-    end
-    execute_all_output = capture_stdout do
-      invoke_task('crucible:execute_all', 'http://r5.example', 'r5')
-    end
+  def test_r5_task_clients_construct_and_resource_test_is_eligible
+    client = build_fhir_client('http://r5.example', 'r5')
+    resource_test = Crucible::Tests::Executor.new(client).find_test('ResourceTest')
 
-    assert_match(/does not support fhir version r5/, execute_output)
-    assert_match(/Execute ResourceTest completed/, execute_output)
-    assert_match(/Execute All completed/, execute_all_output)
+    assert_equal :r5, client.fhir_version
+    assert_true eligible_for_fhir_version?(resource_test, :r5)
   end
 
-  def test_r5_custom_execution_constructs_clients_without_enabling_suites
+  def test_r5_custom_execution_rejects_an_unaudited_suite
     execute_output = capture_stdout do
-      invoke_task('crucible:execute_custom', 'ResourceTest', 'r5')
-    end
-    execute_all_output = capture_stdout do
-      invoke_task('crucible:execute_all_custom', 'r5')
+      invoke_task('crucible:execute_custom', 'FormatTest', 'r5')
     end
 
     assert_match(/does not support fhir version r5/, execute_output)
-    assert_match(/Execute Custom ResourceTest completed/, execute_output)
-    assert_match(/Execute All Custom completed/, execute_all_output)
+    assert_match(/Execute Custom FormatTest completed/, execute_output)
   end
 
   def test_unknown_and_omitted_task_versions_fail_before_client_construction
@@ -93,41 +84,31 @@ class TaskRoutingTest < Test::Unit::TestCase
                               .sort
     listed_suites = listed_tests.select do |_name, test|
       eligible_for_fhir_version?(test, :r5)
-    end.keys.sort
+    end.keys.map { |name| name.start_with?('ResourceTest') ? 'ResourceTest' : name }.uniq.sort
 
-    assert_equal %w[HistoryTest ReadTest], executable_suites
+    assert_equal %w[HistoryTest ReadTest ResourceTest], executable_suites
     assert_equal executable_suites, listed_suites
   end
 
-  def test_r5_listing_and_execution_both_exclude_unsupported_suites
+  def test_r5_listing_includes_resource_test_and_excludes_unaudited_suites
     listing_output = capture_stdout do
       invoke_task('crucible:list_all', 'r5')
     end
     suite_listing_output = capture_stdout do
       invoke_task('crucible:list_suites', 'r5')
     end
-    client = build_fhir_client('http://r5.example', :r5)
-    execution_result = nil
-    execution_output = capture_stdout do
-      execution_result = execute_test(
-        'http://r5.example',
-        client,
-        'ResourceTest'
-      )
-    end
-
-    assert_no_match(/ResourceTest/, listing_output)
-    assert_no_match(/ResourceTest/, suite_listing_output)
-    assert_nil execution_result
-    assert_match(/does not support fhir version r5/, execution_output)
+    assert_match(/ResourceTest/, listing_output)
+    assert_match(/ResourceTest/, suite_listing_output)
+    assert_no_match(/FormatTest/, listing_output)
+    assert_no_match(/FormatTest/, suite_listing_output)
   end
 
-  def test_r5_metadata_task_rejects_an_unsupported_suite
+  def test_r5_metadata_task_rejects_an_unaudited_suite
     error = assert_raise(Crucible::FHIRVersion::UnsupportedVersionError) do
-      invoke_task('crucible:metadata', 'ResourceTest', 'r5')
+      invoke_task('crucible:metadata', 'FormatTest', 'r5')
     end
 
-    assert_match(/Test ResourceTest does not support fhir version r5/, error.message)
+    assert_match(/Test FormatTest does not support fhir version r5/, error.message)
   end
 
   def test_testscript_tasks_remain_stu3_only

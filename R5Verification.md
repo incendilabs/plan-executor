@@ -202,6 +202,58 @@ R4 Spark image: it was configured to require an HTTPS certificate that was
 not present. This was an environment startup limitation, not a suite result;
 the R4B regression runs above completed successfully.
 
+## Task 7C: Resource Suite Verification
+
+Verification performed: 2026-07-29.
+
+`ResourceTest` now explicitly advertises `:r5`. It enumerates 156 R5
+CRUD-testable resource classes from the checked-in R5 structure index. The R5
+index contains 158 concrete resources; `OperationOutcome` and `Parameters`
+remain intentionally excluded because they are response and operation payload
+resources rather than ordinary CRUD targets. This is the pre-existing
+cross-version `BaseSuite::EXCLUDED_RESOURCES` policy, not an R4B fallback.
+
+`test/unit/r5_resource_suite_test.rb` verifies all of the following with local
+siblings selected through `tmp/task-7b/Gemfile` and rbenv Ruby 3.4.9:
+
+- ResourceTest's 156 classes equal the R5 structure-index resources after the
+  two payload exclusions.
+- Every ResourceTest-generated resource and every parsed JSON round-trip graph
+  stays entirely in `FHIR::R5`.
+- R5-only `ActorDefinition`, `ArtifactAssessment`, `GenomicStudy`,
+  `Permission`, `Requirements`, `TestPlan`, and `Transport` are listed.
+- Removed R4B resources `CatalogEntry`, `DeviceUseStatement`,
+  `DocumentManifest`, `Media`, `RequestGroup`, `ResearchDefinition`, and
+  `ResearchElementDefinition` have no R5 ResourceTest entry.
+
+| Verification | Result |
+| --- | --- |
+| `test/unit/r5_resource_suite_test.rb` | 3 tests, 15,832 assertions, 0 failures, 0 errors, 0 omissions |
+| `test/unit/supported_versions_test.rb` | 8 tests, 11 assertions, 0 failures, 0 errors, 0 omissions |
+| Focused R5 ResourceTest routing checks | 5 tests, 12 assertions, 0 failures, 0 errors, 0 omissions |
+| R5 `ResourceTest_Patient` endpoint run | 15 pass, 3 expected `$validate` TODO skips, 0 fail, 0 error |
+| R5 `ResourceTest_MedicationRequest` endpoint run | 15 pass, 3 expected `$validate` TODO skips, 0 fail, 0 error |
+| R5 `ResourceTest_ActorDefinition` endpoint run | 15 pass, 3 expected `$validate` TODO skips, 0 fail, 0 error |
+
+The three endpoint resources cover an unchanged resource (`Patient`), a
+shared R5-changed resource (`MedicationRequest`, whose R5 medication element
+uses `CodeableReference`), and an R5-only resource (`ActorDefinition`). The
+existing ResourceTest behavior intentionally skips `$validate` cases pending
+Spark issue 205; no optional interaction was treated as a universal endpoint
+requirement. The endpoint logs are retained locally at
+`tmp/task-7c/ResourceTestPatientEndpoint.log`,
+`tmp/task-7c/ResourceTestMedicationRequestEndpoint.log`, and
+`tmp/task-7c/ResourceTestActorDefinitionEndpoint.log`.
+
+During the endpoint audit, generated `Patient.photo.size` exposed an R5 JSON
+wire-format defect in `fhir_models`: R5 `integer64` values must be JSON
+strings, but the shared serializer emitted JSON numbers. The prerequisite
+`fhir_models` commit `67c146c4 Serialize R5 integer64 values as JSON strings`
+keeps integer64 values as Ruby integers internally while serializing their JSON
+form as strings. The corrected local file was mounted into the local-source
+Task 6G test image for the endpoint runs. The rule is specified by the R5
+[JSON representation](https://hl7.org/fhir/R5/json.html).
+
 The in-container R5 gate used:
 
 ```sh

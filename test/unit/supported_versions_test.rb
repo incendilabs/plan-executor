@@ -29,7 +29,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
   def test_resource_suites_preserve_their_existing_version_support
     expected = [:dstu2, :stu3, :r4, :r4b]
 
-    assert_equal expected, Crucible::Tests::ResourceTest.new(nil).supported_versions
+    assert_equal expected + [:r5], Crucible::Tests::ResourceTest.new(nil).supported_versions
     assert_equal expected, Crucible::Tests::SearchTest.new(nil).supported_versions
   end
 
@@ -56,7 +56,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
                             .map { |suite| suite.class.name.demodulize }
                             .sort
 
-    assert_equal %w[HistoryTest ReadTest], r5_suite_classes
+    assert_equal %w[HistoryTest ReadTest ResourceTest], r5_suite_classes
   end
 
   def test_r5_listing_and_execution_eligibility_match_the_audited_suites
@@ -66,10 +66,13 @@ class SupportedVersionsTest < Test::Unit::TestCase
                                 .sort
     r5_listed_tests = Crucible::Tests::SuiteEngine.list_all.select do |_name, metadata|
       metadata.fetch('supported_versions', []).include?(:r5)
-    end.keys.sort
+    end.keys
+    r5_listed_suite_classes = r5_listed_tests.map do |name|
+      name.start_with?('ResourceTest') ? 'ResourceTest' : name
+    end.uniq.sort
 
-    assert_equal %w[HistoryTest ReadTest], r5_executable_suites
-    assert_equal r5_executable_suites, r5_listed_tests
+    assert_equal %w[HistoryTest ReadTest ResourceTest], r5_executable_suites
+    assert_equal r5_executable_suites, r5_listed_suite_classes
   end
 
   def test_testscripts_remain_explicitly_stu3_only
