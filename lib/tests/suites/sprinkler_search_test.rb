@@ -4,6 +4,9 @@ module Crucible
 
       attr_accessor :use_post
 
+      INDEXING_RETRY_COUNT = 10
+      INDEXING_RETRY_DELAY = 0.2
+
       def id
         'Search001'
       end
@@ -14,7 +17,7 @@ module Crucible
 
       def initialize(client1, client2=nil)
         super(client1, client2)
-        @supported_versions = [:dstu2, :stu3, :r4, :r4b]
+        @supported_versions = [:dstu2, :stu3, :r4, :r4b, :r5]
         @category = {id: 'core_functionality', title: 'Core Functionality'}
       end
 
@@ -22,45 +25,34 @@ module Crucible
         # Create a patient with gender:missing
         @resources = Crucible::Generator::Resources.new(fhir_version)
         @patient = @resources.minimal_patient
+        @patient_family = "Sprinkler#{SecureRandom.urlsafe_base64(12)}"
+        @patient_given = "Search#{SecureRandom.urlsafe_base64(12)}"
+        @patient.name[0].family = fhir_version == :dstu2 ? [@patient_family] : @patient_family
+        @patient.name[0].given = [@patient_given]
         @patient.identifier = [get_resource(:Identifier).new]
-        @patient.identifier[0].value = SecureRandom.urlsafe_base64
+        @patient_identifier = SecureRandom.urlsafe_base64
+        @patient.identifier[0].value = @patient_identifier
         @patient.gender = nil
         result = @client.create(@patient)
         @patient_id = result.id
+        @patient.id = @patient_id
+        wait_for_index(get_resource(:Patient), @patient_id)
 
-        # Sleep to allow the server to index the new patient before we attempt to read/search for it.
-        # This only applies if the server uses an asynchronous indexing process.
-        sleep(0.2)
-
-        # read all the patients
-        @read_entire_feed=true
-        @client.use_format_param = true
-        reply = @client.read_feed(get_resource(:Patient))
-        @read_entire_feed=false if (!reply.nil? && reply.code!=200)
-        @total_count = 0
-        @entries = []
-
-        mute_response_body 'The body of the Sprinkler Search setup responses are not stored for performance reasons.' do
-          while reply != nil && !reply.resource.nil?
-            @total_count += reply.resource.entry.size
-            @entries += reply.resource.entry
-            reply = @client.next_page(reply)
-            @read_entire_feed=false if (!reply.nil? && reply.code!=200)
-          end
-        end
-
-        # create a condition matching the first patient
+        # Create a condition matching the uniquely identified setup patient.
         @condition = ResourceGenerator.generate(get_resource(:Condition),3)
         if fhir_version == :dstu2
-          @condition.patient = @entries.first.try(:resource).try(:to_reference)
+          @condition.patient = @patient.to_reference
         else
-          @condition.subject = @entries.first.try(:resource).try(:to_reference)
+          @condition.subject = @patient.to_reference
         end
 
         reply = @client.create(@condition)
         @condition_id = reply.id
+        wait_for_index(get_resource(:Condition), @condition_id)
 
-        # create some observations
+        @observation_code = "sprinkler-#{SecureRandom.urlsafe_base64(12)}"
+
+        # Create quantity observations with a unique code so their result sets are isolated.
         @obs_a = create_observation(2.0)
         @obs_b = create_observation(1.96)
         @obs_c = create_observation(2.04)
@@ -73,8 +65,8 @@ module Crucible
         observation = get_resource(:Observation).new
         observation.status = 'preliminary'
         code = get_resource(:Coding).new
-        code.system = 'http://loinc.org'
-        code.code = '2164-2'
+        code.system = 'http://projectcrucible.org/sprinkler'
+        code.code = @observation_code
         observation.code = get_resource(:CodeableConcept).new
         observation.code.coding = [ code ]
         observation.valueQuantity = get_resource(:Quantity).new
@@ -88,7 +80,48 @@ module Crucible
         observation.bodySite.coding = [ body ]
         Crucible::Generator::Resources.new(fhir_version).tag_metadata(observation)
         reply = @client.create(observation)
+        wait_for_index(get_resource(:Observation), reply.id)
         reply.id
+      end
+
+      def wait_for_index(resource_class, id)
+        INDEXING_RETRY_COUNT.times do
+          reply = @client.search(resource_class, search: { parameters: { '_id' => id } })
+          return if reply.code == 200 && reply.resource&.entry&.any? { |entry| entry.resource&.id == id }
+
+          sleep(INDEXING_RETRY_DELAY)
+        end
+
+        raise "Timed out waiting for #{resource_class.name.demodulize}/#{id} to be indexed."
+      end
+
+      def assert_exact_result_ids(reply, expected_ids)
+        assert_response_ok(reply)
+        assert_bundle_response(reply)
+
+        actual_ids = reply.resource.entry.filter_map { |entry| entry.resource&.id }.sort
+        assert_equal expected_ids.sort, actual_ids, 'The search returned an unexpected set of resource ids.'
+        assert_equal expected_ids.length, reply.resource.total, 'The server did not report the expected number of results.'
+      end
+
+      def assert_condition_search_result(reply)
+        assert_exact_result_ids(reply, [@condition_id])
+      end
+
+      def assert_exact_paginated_result_ids(reply, expected_ids)
+        actual_ids = []
+        total = nil
+
+        while reply
+          assert_response_ok(reply)
+          assert_bundle_response(reply)
+          total ||= reply.resource.total
+          actual_ids.concat(reply.resource.entry.filter_map { |entry| entry.resource&.id })
+          reply = @client.next_page(reply)
+        end
+
+        assert_equal expected_ids.sort, actual_ids.sort, 'The search returned an unexpected set of resource ids.'
+        assert_equal expected_ids.length, total, 'The server did not report the expected number of results.'
       end
 
       def teardown
@@ -153,33 +186,7 @@ module Crucible
           validates resource: "Patient", methods: ["search"]
         }
 
-        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
-
-        search_string = ''
-        if fhir_version == :dstu2
-          search_string = @patient.name[0].family.first[0..2]
-        else
-          search_string = @patient.name[0].family[0..2]
-        end
-        search_regex = Regexp.new(search_string, Regexp::IGNORECASE)
-        # how many patients in the bundle have matching names?
-        expected = 0
-        @entries.each do |entry|
-          patient = entry.resource
-          isMatch = false
-          if !patient.nil? && !patient.name.nil?
-            patient.name.each do |name|
-              if !name.family.nil?
-                familyName = name.family
-                familyName = familyName[0] if familyName.kind_of?(Array)
-                unless (familyName =~ search_regex).nil?
-                  isMatch = true
-                end
-              end
-            end
-          end
-          expected += 1 if isMatch
-        end
+        search_string = @patient_family[0..2]
 
         options = {
           :search => {
@@ -191,9 +198,7 @@ module Crucible
           }
         }
         reply = @client.search(get_resource(:Patient), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        assert_equal expected, reply.resource.total, 'The server did not report the expected number of results.'
+        assert_exact_result_ids(reply, [@patient_id])
       end
 
       test "SE04#{action[0]}", 'Search patient resource on given name' do
@@ -204,28 +209,7 @@ module Crucible
           validates resource: "Patient", methods: ["search"]
         }
 
-        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
-
-        search_string = @patient.name[0].given[0]
-        search_regex = Regexp.new(search_string, Regexp::IGNORECASE)
-        # how many patients in the bundle have matching names?
-        expected = 0
-        @entries.each do |entry|
-          patient = entry.resource
-          isMatch = false
-          if !patient.nil? && !patient.name.nil?
-            patient.name.each do |name|
-              if !name.given.nil?
-                name.given.each do |given|
-                  if !(given =~ search_regex).nil?
-                    isMatch = true
-                  end
-                end
-              end
-            end
-          end
-          expected += 1 if isMatch
-        end
+        search_string = @patient_given
 
         options = {
           :search => {
@@ -237,9 +221,7 @@ module Crucible
           }
         }
         reply = @client.search(get_resource(:Patient), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        assert_equal expected, reply.resource.total, 'The server did not report the expected number of results.'
+        assert_exact_result_ids(reply, [@patient_id])
       end
 
       test "SE05.0#{action[0]}", 'Search condition by patient reference url (partial)' do
@@ -250,29 +232,17 @@ module Crucible
           validates resource: "Condition", methods: ["search"]
         }
 
-        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
-
-        # pick some search parameters... we previously created
-        # next, we're going execute a series of searches for conditions referencing the patient
         options = {
           :search => {
             :flag => flag,
             :compartment => nil,
             :parameters => {
-              'patient' => @entries.first.resource.to_reference.reference
+              'patient' => @patient.to_reference.reference
             }
           }
         }
         reply = @client.search(get_resource(:Condition), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        reply.resource.entry.each do |e|
-          if fhir_version == :dstu2
-            assert((e.resource.patient.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          else
-            assert((e.resource.subject.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          end
-        end
+        assert_condition_search_result(reply)
       end
 
       test "SE05.0F#{action[0]}", 'Search condition by patient reference url (full)' do
@@ -283,19 +253,15 @@ module Crucible
           validates resource: "Condition", methods: ["search"]
         }
 
-        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
-
-        # pick some search parameters... we previously created
         options = {
-          :id => @entries[0].resource.id,
-          :resource => @entries[0].resource.class
+          :id => @patient.id,
+          :resource => @patient.class
         }
         temp = @client.use_format_param
         @client.use_format_param = false
         patient_url = @client.full_resource_url(options)
         @client.use_format_param = temp
 
-        # next, we're going execute a series of searches for conditions referencing the patient
         options = {
           :search => {
             :flag => flag,
@@ -306,15 +272,7 @@ module Crucible
           }
         }
         reply = @client.search(get_resource(:Condition), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        reply.resource.entry.each do |e|
-          if fhir_version == :dstu2
-            assert((e.resource.patient.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          else
-            assert((e.resource.subject.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          end
-        end
+        assert_condition_search_result(reply)
       end
 
       test "SE05.1#{action[0]}", 'Search condition by patient reference id' do
@@ -325,12 +283,8 @@ module Crucible
           validates resource: "Condition", methods: ["search"]
         }
 
-        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
+        patient_id = @patient.id
 
-        # pick some search parameters... we previously created
-        patient_id = @entries[0].resource.id
-
-        # next, we're going execute a series of searches for conditions referencing the patient
         options = {
           :search => {
             :flag => flag,
@@ -341,15 +295,7 @@ module Crucible
           }
         }
         reply = @client.search(get_resource(:Condition), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        reply.resource.entry.each do |e|
-          if fhir_version == :dstu2
-            assert((e.resource.patient.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          else
-            assert((e.resource.subject.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          end
-        end
+        assert_condition_search_result(reply)
       end
 
       test "SE05.2#{action[0]}", 'Search condition by patient:Patient reference url' do
@@ -360,12 +306,9 @@ module Crucible
           validates resource: "Condition", methods: ["search"]
         }
 
-        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
-
-        # pick some search parameters... we previously created
         options = {
-          :id => @entries[0].resource.id,
-          :resource => @entries[0].resource.class
+          :id => @patient.id,
+          :resource => @patient.class
         }
         temp = @client.use_format_param
         @client.use_format_param = false
@@ -373,7 +316,6 @@ module Crucible
         patient_url = patient_url[1..-1] if patient_url[0]=='/'
         @client.use_format_param = temp
        
-        # next, we're going execute a series of searches for conditions referencing the patient
         options = {
           :search => {
             :flag => flag,
@@ -384,15 +326,7 @@ module Crucible
           }
         }
         reply = @client.search(get_resource(:Condition), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        reply.resource.entry.each do |e|
-          if fhir_version == :dstu2
-            assert((e.resource.patient.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          else
-            assert((e.resource.subject.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          end
-        end
+        assert_condition_search_result(reply)
       end
 
       test "SE05.3#{action[0]}", 'Search condition by patient:Patient reference id' do
@@ -403,13 +337,8 @@ module Crucible
           validates resource: "Condition", methods: ["search"]
         }
         
-        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
-        
-        # pick some search parameters... we previously created
-        patient = @entries[0].resource
-        patient_id = @entries[0].resource.id
+        patient_id = @patient.id
 
-        # next, we're going execute a series of searches for conditions referencing the patient
         options = {
           :search => {
             :flag => flag,
@@ -420,15 +349,7 @@ module Crucible
           }
         }
         reply = @client.search(get_resource(:Condition), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        reply.resource.entry.each do |e|
-          if fhir_version == :dstu2
-            assert((e.resource.patient.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          else
-            assert((e.resource.subject.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          end
-        end
+        assert_condition_search_result(reply)
       end
 
       test "SE05.4#{action[0]}", 'Search condition by patient:_id reference' do
@@ -438,11 +359,8 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
-        # pick some search parameters... we previously created
-        patient_id = @entries[0].resource.id
+        patient_id = @patient.id
 
-        # next, we're going execute a series of searches for conditions referencing the patient
         options = {
           :search => {
             :flag => flag,
@@ -453,15 +371,7 @@ module Crucible
           }
         }
         reply = @client.search(get_resource(:Condition), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        reply.resource.entry.each do |e|
-          if fhir_version == :dstu2
-            assert((e.resource.patient.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          else
-            assert((e.resource.subject.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          end
-        end
+        assert_condition_search_result(reply)
       end
 
       test "SE05.5#{action[0]}", 'Search condition by patient.name reference' do
@@ -471,11 +381,8 @@ module Crucible
           links "#{BASE_SPEC_LINK}/condition.html#search"
           validates resource: "Condition", methods: ["search"]
         }
-        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
-        # pick some search parameters... we previously created
-        patient_name = @patient.name[0].family
+        patient_name = @patient_family
 
-        # next, we're going execute a series of searches for conditions referencing the patient
         options = {
           :search => {
             :flag => flag,
@@ -486,15 +393,7 @@ module Crucible
           }
         }
         reply = @client.search(get_resource(:Condition), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        reply.resource.entry.each do |e|
-          if fhir_version == :dstu2
-            assert((e.resource.patient.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          else
-            assert((e.resource.subject.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          end
-        end
+        assert_condition_search_result(reply)
       end
 
       test "SE05.6#{action[0]}", 'Search condition by patient.identifier reference' do
@@ -505,10 +404,8 @@ module Crucible
           validates resource: "Condition", methods: ["search"]
         }
         assert @patient_id, 'Could not create a patient in setup.'
-        # pick some search parameters... we previously created
-        patient_identifier = @patient.identifier[0].value
+        patient_identifier = @patient_identifier
 
-        # next, we're going execute a series of searches for conditions referencing the patient
         options = {
           :search => {
             :flag => flag,
@@ -519,15 +416,7 @@ module Crucible
           }
         }
         reply = @client.search(get_resource(:Condition), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        reply.resource.entry.each do |e|
-          if fhir_version == :dstu2
-            assert((e.resource.patient.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          else
-            assert((e.resource.subject.reference == @entries.first.resource.to_reference.reference),"The search returned a Condition that doesn't match the Patient.")
-          end
-        end
+        assert_condition_search_result(reply)
       end
 
       test "SE06#{action[0]}", 'Search condition and _include' do
@@ -539,7 +428,6 @@ module Crucible
         }
         assert @condition_id, 'Could not create Condition in setup.'
 
-        # next, we're going execute a series of searches for conditions referencing the patient
         options = {
           :search => {
             :flag => flag,
@@ -553,12 +441,10 @@ module Crucible
         reply = @client.search(get_resource(:Condition), options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
-        assert reply.resource.total > 0, 'The server should have Conditions that _include=Condition:patient.'
-        has_patient = false
-        reply.resource.entry.each do |entry|
-          has_patient = true if (entry.resource && entry.resource.class == get_resource(:Patient))
-        end
-        assert(has_patient,'The server did not include the Patient referenced in the Condition.', reply.body)
+        assert_equal 1, reply.resource.total, 'The server did not report the expected number of primary results.'
+        assert_equal [@condition_id, @patient_id].sort,
+                     reply.resource.entry.filter_map { |entry| entry.resource&.id }.sort,
+                     'The server did not return the expected primary and included resources.'
       end
 
       test "SE07#{action[0]}", 'Search patient and _revinclude' do
@@ -610,26 +496,13 @@ module Crucible
             :flag => flag,
             :compartment => nil,
             :parameters => {
-              'value-quantity' => '2.0||mmol'
+              'code' => "http://projectcrucible.org/sprinkler|#{@observation_code}",
+              'value-quantity' => '2.0|http://unitsofmeasure.org|mmol'
             }
           }
         }
         reply = @client.search(get_resource(:Observation), options)
-        has_obs_a = has_obs_b = has_obs_c = has_obs_d = false
-        while reply != nil
-          assert_response_ok(reply)
-          assert_bundle_response(reply)
-          has_obs_a = true if reply.resource.get_by_id(@obs_a)
-          has_obs_b = true if reply.resource.get_by_id(@obs_b)
-          has_obs_c = true if reply.resource.get_by_id(@obs_c)
-          has_obs_d = true if reply.resource.get_by_id(@obs_d)          
-          reply = @client.next_page(reply)
-        end
-
-        assert has_obs_a,  'Search on quantity value 2.0 should return 2.0'
-        assert has_obs_b, 'Search on quantity value 2.0 should return 1.96'
-        assert has_obs_c, 'Search on quantity value 2.0 should return 2.04'
-        assert !has_obs_d, 'Search on quantity value 2.0 should not return 1.80'
+        assert_exact_paginated_result_ids(reply, [@obs_a, @obs_b, @obs_c])
       end
 
       test "SE22#{action[0]}", 'Search for quantity (in observation) - operators' do
@@ -647,27 +520,13 @@ module Crucible
             :flag => flag,
             :compartment => nil,
             :parameters => {
-              'value-quantity' => 'gt5||mmol'
+              'code' => "http://projectcrucible.org/sprinkler|#{@observation_code}",
+              'value-quantity' => 'gt5|http://unitsofmeasure.org|mmol'
             }
           }
         }
         reply = @client.search(get_resource(:Observation), options)
-        has_obs_e = has_obs_f = false
-        while reply != nil
-          assert_response_ok(reply)
-          assert_bundle_response(reply)
-          reply.resource.entry.each do |e|
-            value = e.resource.value.try(:value)
-            assert(value, "Search did not return a value.")
-            assert((value > 5), "Search should not return values less than or equal to 5.")
-          end
-          has_obs_e = true if reply.resource.get_by_id(@obs_e)
-          has_obs_f = true if reply.resource.get_by_id(@obs_f)
-          reply = @client.next_page(reply)
-        end
-
-        assert has_obs_e, 'Search greater than quantity should return greater value.'
-        assert has_obs_f, 'Search greater than quantity should return greater value.'
+        assert_exact_paginated_result_ids(reply, [@obs_e, @obs_f])
       end
 
       test "SE23#{action[0]}", 'Search with quantifier :missing, on Patient.gender' do
@@ -678,28 +537,18 @@ module Crucible
           validates resource: "Patient", methods: ["search"]
         }
 
-        assert @read_entire_feed, 'Could not find a patient to search on in setup.'
-
-        # how many patients in the bundle have no gender?
-        expected = 0
-        @entries.each do |entry|
-          patient = entry.resource
-          expected += 1 if !patient.nil? && patient.gender.nil?
-        end
-
         options = {
           :search => {
             :flag => flag,
             :compartment => nil,
             :parameters => {
-              'gender:missing' => true
+              'gender:missing' => true,
+              'identifier' => @patient_identifier
             }
           }
         }
         reply = @client.search(get_resource(:Patient), options)
-        assert_response_ok(reply)
-        assert_bundle_response(reply)
-        assert_equal expected, reply.resource.total, 'The server did not report the expected number of results.'
+        assert_exact_result_ids(reply, [@patient_id])
       end
 
       test "SE24#{action[0]}", 'Search with non-existing parameter' do
