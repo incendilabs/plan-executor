@@ -12,23 +12,25 @@ module Crucible
 
       def initialize(client1, client2=nil)
         super(client1, client2)
-        @supported_versions = [:dstu2, :stu3, :r4, :r4b]
+        @supported_versions = [:dstu2, :stu3, :r4, :r4b, :r5]
         @category = {id: 'core_functionality', title: 'Core Functionality'}
       end
 
       def setup
-        # try to find a patient
         begin
-          response = @client.read_feed(get_resource(:Patient))
-          @patient = response.resource.entry.first.resource
+          patient = get_resource(:Patient).new(
+            meta: { tag: [{ system: 'http://projectcrucible.org', code: 'testdata' }] },
+            name: { family: 'Emerald', given: 'Caro' }
+          )
+          response = @client.create(patient)
+          assert_response_ok(response)
+          @patient = response.resource || patient
+          @patient.id ||= response.id
+          raise 'Create response did not identify the Patient' if @patient.id.blank?
+
+          @patient_created = true
         rescue
-          # try to create a patient
-          begin
-            @patient = get_resource(:Patient).new(meta: { tag: [{ system: 'http://projectcrucible.org', code: 'testdata'}] }, name: { family: 'Emerald', given: 'Caro' })
-            @patient_created = true
-          rescue
-            @patient = nil
-          end
+          @patient = nil
         end
       end
 
@@ -48,6 +50,8 @@ module Crucible
         patient = get_resource(:Patient).read(@patient.id)
 
         assert_equal @patient.id, @client.reply.id, 'Server returned wrong patient.'
+        assert_resource_type @client.reply, get_resource(:Patient)
+        assert_equal get_resource(:Patient), patient.class, 'Read was not parsed with the selected FHIR version.'
         warning { assert_valid_resource_content_type_present(@client.reply) }
         warning { assert_etag_present(@client.reply) }
         warning { assert_last_modified_present(@client.reply) }
@@ -103,8 +107,28 @@ module Crucible
         @summary_patient = nil
         ignore_client_exception { @summary_patient = get_resource(:Patient).read_with_summary(@patient.id, "text") }
         assert(@summary_patient != nil, 'Patient resource type not returned.')
-        assert(@summary_patient.text, 'Requested summary narrative was not provided.', @client.reply.body)
-      end      
+        assert_equal get_resource(:Patient), @summary_patient.class, 'Summary response was not parsed with the selected FHIR version.'
+        warning do
+          assert(@summary_patient.text, 'Server did not include a narrative for _summary=text; it may have returned full content instead.')
+        end
+      end
+
+      test 'R006', 'Conditional read with ETag' do
+        metadata {
+          links "#{REST_SPEC_LINK}#read"
+          requires resource: "Patient", methods: ["create", "read", "delete"]
+          validates resource: "Patient", methods: ["read"]
+        }
+        skip 'Patient not created in setup.' if @patient.nil?
+
+        version_id = @patient.meta.try(:versionId) || @client.reply.version
+        skip 'Server did not provide a Patient versionId.' if version_id.blank?
+
+        response = @client.conditional_read_version(get_resource(:Patient), @patient.id, version_id)
+        assert([200, 304].include?(response.code), 'Conditional read must return full content or not-modified.')
+        assert_resource_type(response, get_resource(:Patient)) if response.code == 200
+        assert_nil response.resource, 'A 304 response must not contain a resource.' if response.code == 304
+      end
 
     end
   end

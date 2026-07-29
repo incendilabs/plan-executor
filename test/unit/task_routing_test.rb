@@ -84,18 +84,19 @@ class TaskRoutingTest < Test::Unit::TestCase
     assert_match(/FHIR version is required/, omitted_listing.message)
   end
 
-  def test_r5_is_known_but_no_suite_or_metadata_becomes_eligible
+  def test_r5_eligibility_is_limited_to_audited_suites
     suites = Crucible::Tests::SuiteEngine.new.tests
     listed_tests = Crucible::Tests::Executor.list_all
-    generated_metadata = nil
 
-    capture_stdout do
-      generated_metadata = Crucible::Tests::SuiteEngine.generate_metadata(:r5)
-    end
+    executable_suites = suites.select { |suite| eligible_for_fhir_version?(suite, :r5) }
+                              .map(&:title)
+                              .sort
+    listed_suites = listed_tests.select do |_name, test|
+      eligible_for_fhir_version?(test, :r5)
+    end.keys.sort
 
-    assert_true suites.none? { |suite| eligible_for_fhir_version?(suite, :r5) }
-    assert_true listed_tests.none? { |_name, test| eligible_for_fhir_version?(test, :r5) }
-    assert_empty generated_metadata
+    assert_equal %w[HistoryTest ReadTest], executable_suites
+    assert_equal executable_suites, listed_suites
   end
 
   def test_r5_listing_and_execution_both_exclude_unsupported_suites
