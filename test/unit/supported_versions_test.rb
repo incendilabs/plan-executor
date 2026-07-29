@@ -56,7 +56,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
                             .map { |suite| suite.class.name.demodulize }
                             .sort
 
-    assert_equal %w[HistoryTest ReadTest ResourceTest], r5_suite_classes
+    assert_equal %w[FormatTest HistoryTest ReadTest ResourceTest], r5_suite_classes
   end
 
   def test_r5_listing_and_execution_eligibility_match_the_audited_suites
@@ -71,7 +71,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
       name.start_with?('ResourceTest') ? 'ResourceTest' : name
     end.uniq.sort
 
-    assert_equal %w[HistoryTest ReadTest ResourceTest], r5_executable_suites
+    assert_equal %w[FormatTest HistoryTest ReadTest ResourceTest], r5_executable_suites
     assert_equal r5_executable_suites, r5_listed_suite_classes
   end
 
