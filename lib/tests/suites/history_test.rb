@@ -12,7 +12,7 @@ module Crucible
 
       def initialize(client1, client2=nil)
         super(client1, client2)
-        @supported_versions = [:dstu2, :stu3, :r4, :r4b]
+        @supported_versions = [:dstu2, :stu3, :r4, :r4b, :r5]
         @category = {id: 'core_functionality', title: 'Core Functionality'}
       end
 
@@ -36,6 +36,7 @@ module Crucible
           @version << @client.reply.version
           @patient.destroy
           assert([200,204].include?(@client.reply.code), 'The server should have returned a 200 or 204 upon successful deletion.')
+          @deleted_version = @client.reply.version
 
           @entry_count = @version.length
           # add one for deletion
@@ -80,9 +81,9 @@ module Crucible
         bundle = get_resource(:Patient).resource_instance_history(@patient.id)
         entries = bundle.entry
 
-        assert_equal 1, entries.select{|entry| entry.request.try(:local_method) == 'DELETE' }.size, 'Wrong number of DELETE transactions in the history bundle'
-        assert_equal 1, entries.select{|entry| entry.request.try(:local_method) == 'PUT' }.size, 'Wrong number of PUT transactions in the history bundle'
-        assert_equal 1, entries.select{|entry| entry.request.try(:local_method) == 'POST' }.size, 'Wrong number of POST transactions in the history bundle'
+        assert_equal 1, entries.count { |entry| history_request_method(entry) == 'DELETE' }, 'Wrong number of DELETE transactions in the history bundle'
+        assert_equal 1, entries.count { |entry| history_request_method(entry) == 'PUT' }, 'Wrong number of PUT transactions in the history bundle'
+        assert_equal 1, entries.count { |entry| history_request_method(entry) == 'POST' }, 'Wrong number of POST transactions in the history bundle'
 
       end
 
@@ -132,17 +133,16 @@ module Crucible
         active_entries(bundle.entry).each do |entry|
           pulled = get_resource(:Patient).vread(entry.resource.id, entry.resource.meta.versionId)
           assert !pulled.nil?, "Cannot find version that was present in history"
+          assert_equal get_resource(:Patient), pulled.class, 'Version read was not parsed with the selected FHIR version.'
         end
 
-        deleted_entries(bundle.entry).each do |entry|
-          # FIXME: Should we parse the request URL or drop this assertion?
-          if entry.resource
+        deleted_version = @deleted_version.presence || deleted_history_version(bundle)
+        skip 'Server did not expose a deletion versionId.' if deleted_version.blank?
 
-            ignore_client_exception { pulled = get_resource(:Patient).vread(entry.resource.id, entry.resource.meta.versionId) }
-            assert_response_gone @client.reply
-
-          end
+        ignore_client_exception do
+          get_resource(:Patient).vread(@patient.id, deleted_version)
         end
+        assert_response_gone @client.reply
       end
 
       test "HI04", "history for missing resource" do
@@ -154,7 +154,22 @@ module Crucible
 
         ignore_client_exception { get_resource(:Patient).resource_instance_history('3141592unlikely') }
         assert_response_not_found @client.reply
-        assert @client.reply.resource.nil?, 'bad history request should not return a resource'
+        if @client.reply.resource
+          assert_equal get_resource(:OperationOutcome), @client.reply.resource.class,
+                       'History error response was not parsed with the selected FHIR version.'
+        end
+      end
+
+      test "HI05", "read a deleted resource" do
+        metadata {
+          links "#{REST_SPEC_LINK}#read"
+          requires resource: "Patient", methods: ["create", "update", "delete"]
+          validates resource: "Patient", methods: ["read"]
+        }
+        skip 'Patient not correctly created in setup.' unless @patient_setup
+
+        response = @client.read(get_resource(:Patient), @patient.id)
+        assert_response_gone response
       end
 
       test "HI06", "all history for resource with since" do
@@ -197,7 +212,7 @@ module Crucible
         assert (!bundle.nil? && bundle.class == get_resource(:Bundle)), "History should be a Bundle"
         entry_ids_are_present(bundle.entry)
 
-        relevant_entries = bundle.entry.select{|x|x.request.try(:local_method)!='DELETE'}
+        relevant_entries = bundle.entry.reject { |entry| history_request_method(entry) == 'DELETE' }
         relevant_entries.map!(&:resource).map!(&:meta).compact rescue assert(false, 'Unable to find meta for resources returned by the bundle')
         relevant_entries.each_cons(2) do |left, right|
           if !left.lastUpdated.nil? && !right.lastUpdated.nil?
@@ -296,8 +311,7 @@ module Crucible
 
       def deleted_entries(entries)
         entries.select do |entry|
-          assert !entry.request.nil?, "history bundle entries do not have request elements, deleted entries cannot be distinguished"
-          entry.request.try(:local_method) == "DELETE"
+          history_request_method(entry) == 'DELETE'
         end
       end
 
@@ -307,7 +321,7 @@ module Crucible
 
 
       def entry_ids_are_present(entries)
-        relevant_entries = entries.select{|x|x.request.try(:local_method)!='DELETE'}
+        relevant_entries = entries.reject { |entry| history_request_method(entry) == 'DELETE' }
         ids = relevant_entries.map(&:resource).map(&:id).compact rescue assert(false, 'Unable to find IDs for resources returned by the bundle')
 
         # check that we have ids and self links
@@ -319,7 +333,7 @@ module Crucible
       end
 
       def check_sort_order(entries)
-        relevant_entries = entries.select{|x|x.request.try(:local_method)!='DELETE'}
+        relevant_entries = entries.reject { |entry| history_request_method(entry) == 'DELETE' }
         relevant_entry_metas = relevant_entries.map(&:resource).map!(&:meta).compact rescue assert(false, 'Unable to find meta for resources returned by the bundle')
 
         id_version_map = {}
@@ -339,6 +353,19 @@ module Crucible
             raise AssertionException.new 'Unable to determine if entries are in the correct order -- no meta.versionId or meta.lastUpdated'
           end
         end
+      end
+
+      def history_request_method(entry)
+        assert !entry.request.nil?, 'History bundle entries must identify the originating request.'
+
+        entry.request.local_method.to_s.upcase
+      end
+
+      def deleted_history_version(bundle)
+        deleted_entry = deleted_entries(bundle.entry).first
+        return if deleted_entry.nil?
+
+        deleted_entry.request.url.to_s[/_history\/([^\/]+)\z/, 1]
       end
 
     end

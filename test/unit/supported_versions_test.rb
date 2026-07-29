@@ -50,21 +50,26 @@ class SupportedVersionsTest < Test::Unit::TestCase
     assert_equal R4B_CAPABLE_SUITE_CLASSES, r4b_suite_classes
   end
 
-  def test_r5_is_not_enabled_for_any_suite_yet
+  def test_only_audited_read_and_history_suites_are_enabled_for_r5
     suites = Crucible::Tests::SuiteEngine.new.tests
+    r5_suite_classes = suites.select { |suite| suite.supported_versions.include?(:r5) }
+                            .map { |suite| suite.class.name.demodulize }
+                            .sort
 
-    assert_true suites.none? { |suite| suite.supported_versions.include?(:r5) }
+    assert_equal %w[HistoryTest ReadTest], r5_suite_classes
   end
 
-  def test_r5_listing_and_execution_eligibility_are_both_empty_before_an_audit
+  def test_r5_listing_and_execution_eligibility_match_the_audited_suites
     suites = Crucible::Tests::SuiteEngine.new.tests
     r5_executable_suites = suites.select { |suite| suite.supported_versions.include?(:r5) }
-    r5_listed_tests = Crucible::Tests::SuiteEngine.list_all.values.select do |metadata|
+                                .map(&:title)
+                                .sort
+    r5_listed_tests = Crucible::Tests::SuiteEngine.list_all.select do |_name, metadata|
       metadata.fetch('supported_versions', []).include?(:r5)
-    end
+    end.keys.sort
 
-    assert_empty r5_executable_suites
-    assert_empty r5_listed_tests
+    assert_equal %w[HistoryTest ReadTest], r5_executable_suites
+    assert_equal r5_executable_suites, r5_listed_tests
   end
 
   def test_testscripts_remain_explicitly_stu3_only

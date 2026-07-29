@@ -9,8 +9,8 @@ plan-executor R5 harness against the local R5 implementations in
 `fhir_models` and `fhir_client`, while retaining the existing DSTU2 and STU3
 model dependencies.
 
-Suite compatibility and real-endpoint execution are not part of this task.
-Individual suites do not advertise R5 support yet.
+Suite compatibility and real-endpoint execution were not part of this task.
+They are recorded separately in the Task 7B section below.
 
 ## Source Revisions
 
@@ -148,6 +148,59 @@ The self-contained Docker image ran the complete suite with:
 bundle exec ruby -Itest -e \
   'Dir["test/unit/**/*_test.rb"].sort.each { |file| require File.expand_path(file) }'
 ```
+
+## Task 7B: Read And History Suite Verification
+
+Verification performed: 2026-07-29.
+
+`ReadTest` and `HistoryTest` were audited against FHIR R5 read, conditional
+read, vread, delete, and history behavior. They now explicitly advertise
+`:r5`; the other ten R4B-capable suites remain unaudited and ineligible for
+R5.
+
+Ruby-level checks used rbenv Ruby 3.4.9 and the visible
+`tmp/task-7b/Gemfile`, whose `path:` dependencies select the local sibling
+`fhir_models`, `fhir_client`, `fhir_stu3_models`, and
+`fhir_dstu2_models` checkouts. No FHIR implementation was resolved from
+GitHub.
+
+| Verification | Result |
+| --- | --- |
+| `test/unit/r5_read_history_suite_test.rb` | 4 tests, 11 assertions, 0 failures, 0 errors, 0 omissions |
+| `test/unit/supported_versions_test.rb` | 8 tests, 11 assertions, 0 failures, 0 errors, 0 omissions |
+| `TaskRoutingTest#test_r5_eligibility_is_limited_to_audited_suites` | 1 test, 2 assertions, 0 failures, 0 errors, 0 omissions |
+| R5 `ReadTest` endpoint run | 6 pass, 0 fail, 0 error, 0 skip |
+| R5 `HistoryTest` endpoint run | 11 pass, 0 fail, 0 error, 0 skip |
+| R4B `ReadTest` regression endpoint run | 6 pass, 0 fail, 0 error, 0 skip |
+| R4B `HistoryTest` regression endpoint run | 11 pass, 0 fail, 0 error, 0 skip |
+
+The endpoint runs used the local-source Task 6G image
+`incendi/plan_executor:r5-task-6g-local` with the Task 7B suite files mounted
+for execution, against the user-built `sparkfhir/spark:r5-latest` and
+`sparkfhir/mongo:r5-latest` images. The raw logs and the captured deletion
+history payload are retained locally under `tmp/task-7b/` and are not
+committed.
+
+The audit makes the following R5-specific behavior explicit:
+
+- Conditional read accepts either a full `200` response or `304 Not Modified`.
+- A deleted resource's ordinary read and version read expect `410 Gone`.
+- A history deletion entry has no resource body; its request URL carries the
+  version identifier used for the deleted-resource vread assertion.
+- A `404` history response may carry an R5 `OperationOutcome` and must parse
+  through the selected R5 model namespace.
+- `_summary=text` must parse as R5. The suite warns, rather than fails, when a
+  server returns full content without a narrative because servers may ignore a
+  requested summary form.
+
+These conditions follow the R5 [HTTP interaction
+rules](https://hl7.org/fhir/R5/http.html) and [search summary
+rules](https://hl7.org/fhir/R5/search.html).
+
+An additional direct R4 endpoint attempt could not start the locally supplied
+R4 Spark image: it was configured to require an HTTPS certificate that was
+not present. This was an environment startup limitation, not a suite result;
+the R4B regression runs above completed successfully.
 
 The in-container R5 gate used:
 
