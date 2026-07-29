@@ -202,6 +202,40 @@ R4 Spark image: it was configured to require an HTTPS certificate that was
 not present. This was an environment startup limitation, not a suite result;
 the R4B regression runs above completed successfully.
 
+## Task 7G: General Search Suite Verification
+
+Verification performed: 2026-07-29.
+
+`SearchTest` and `RobustSearchTest` now explicitly advertise `:r5`. The
+SearchTest R5 branch compares each endpoint-advertised search parameter name
+and type with the R5 SearchParameter definition for that resource, including
+the generic `Resource` parameters. `_summary` remains an explicitly allowed
+result-control parameter because it is not a SearchParameter resource.
+
+The focused unit tests use the local sibling R5 model and client repositories
+through `tmp/task-7b/Gemfile` and rbenv Ruby 3.4.9:
+
+| Verification | Result |
+| --- | --- |
+| `R5SearchSuiteTest` | 5 tests, 25 assertions, 0 failures, 0 errors |
+| `SupportedVersionsTest` and `TaskRoutingTest` with `R5SearchSuiteTest` | 22 tests, 82 assertions, 0 failures, 0 errors |
+| R5 `SearchTest` endpoint run | 1,092 pass, 0 fail, 0 error, 0 skip |
+| R5 `RobustSearchTest` endpoint run | 0 pass, 0 fail, 0 error, 1 explicit Spark #310 skip |
+
+The endpoint runs used local-source image
+`incendi/plan_executor:r5-task7g-local-deps` against
+`sparkfhir/spark:r5-task7g-local` and
+`sparkfhir/mongo:r5-task7g-local`. Raw output is retained under
+`tmp/task-7g/` and is not committed.
+
+The R5 definition coverage includes representative string, token, reference,
+date, number, and quantity parameters. `SearchTest` itself executes only its
+existing `_id` and `_count` GET/POST cases; it does not exercise modifiers,
+chaining, inclusion, sorting, paging, or arbitrary typed query values. Those
+behaviors remain in scope for Task 7H. `RobustSearchTest` contains only the
+MPI `$match` case, which remains an explicit skip for
+[Spark issue #310](https://github.com/FirelyTeam/spark/issues/310).
+
 ## Task 7C: Resource Suite Verification
 
 Verification performed: 2026-07-29.

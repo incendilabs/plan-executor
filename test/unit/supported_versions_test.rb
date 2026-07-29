@@ -26,11 +26,12 @@ class SupportedVersionsTest < Test::Unit::TestCase
     assert_true suites.all? { |suite| suite.supported_versions.any? }
   end
 
-  def test_resource_suites_preserve_their_existing_version_support
+  def test_resource_and_search_suites_advertise_their_audited_versions
     expected = [:dstu2, :stu3, :r4, :r4b]
 
     assert_equal expected + [:r5], Crucible::Tests::ResourceTest.new(nil).supported_versions
-    assert_equal expected, Crucible::Tests::SearchTest.new(nil).supported_versions
+    assert_equal expected + [:r5], Crucible::Tests::SearchTest.new(nil).supported_versions
+    assert_equal expected.drop(1) + [:r5], Crucible::Tests::RobustSearchTest.new(nil).supported_versions
   end
 
   def test_every_r4_suite_advertises_r4b
@@ -56,7 +57,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
                             .map { |suite| suite.class.name.demodulize }
                             .sort
 
-    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest TransactionAndBatchTest], r5_suite_classes
+    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest TransactionAndBatchTest], r5_suite_classes
   end
 
   def test_r5_listing_and_execution_eligibility_match_the_audited_suites
@@ -68,10 +69,16 @@ class SupportedVersionsTest < Test::Unit::TestCase
       metadata.fetch('supported_versions', []).include?(:r5)
     end.keys
     r5_listed_suite_classes = r5_listed_tests.map do |name|
-      name.start_with?('ResourceTest') ? 'ResourceTest' : name
+      if name.start_with?('ResourceTest')
+        'ResourceTest'
+      elsif name.start_with?('SearchTest')
+        'SearchTest'
+      else
+        name
+      end
     end.uniq.sort
 
-    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest TransactionAndBatchTest], r5_executable_suites
+    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest TransactionAndBatchTest], r5_executable_suites
     assert_equal r5_executable_suites, r5_listed_suite_classes
   end
 

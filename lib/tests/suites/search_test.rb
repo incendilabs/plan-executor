@@ -2,6 +2,8 @@ module Crucible
   module Tests
     class SearchTest < BaseSuite
 
+      R5_SEARCH_RESULT_PARAMETERS = ['_summary'].freeze
+
       attr_accessor :resource_class
       attr_accessor :conformance
       attr_accessor :searchParams
@@ -38,7 +40,7 @@ module Crucible
 
       def initialize(client1, client2=nil)
         super(client1, client2)
-        @supported_versions = [:dstu2, :stu3, :r4, :r4b]
+        @supported_versions = [:dstu2, :stu3, :r4, :r4b, :r5]
       end
 
       # this allows results to have unique ids for resource based tests
@@ -77,10 +79,33 @@ module Crucible
         metadata {
           define_metadata('search')
         }
-        searchParamNames = []
-        searchParamNames = @searchParams.map { |item| item.name } if !@searchParams.nil?
-        searchParamsDiff = @resource_class::SEARCH_PARAMS-searchParamNames 
-        assert (searchParamsDiff.size <= 0), "The server does not support the following params: #{searchParamsDiff.join(', ')}."
+        if fhir_version == :r5
+          expected_params = r5_search_parameter_definitions
+          expected_by_name = expected_params.each_with_object({}) do |search_param, definitions|
+            definitions[search_param['code']] = search_param
+          end
+          advertised_params = @searchParams || []
+          allowed_params = expected_by_name.keys + R5_SEARCH_RESULT_PARAMETERS
+          unknown_params = advertised_params.map(&:name) - allowed_params
+
+          assert unknown_params.empty?,
+                 "The server advertises search parameters not defined by R5: #{unknown_params.join(', ')}."
+
+          advertised_params.each do |search_param|
+            next if R5_SEARCH_RESULT_PARAMETERS.include?(search_param.name)
+
+            expected = expected_by_name.fetch(search_param.name)
+            assert_equal expected['type'], search_param.type,
+                         "The server advertises #{search_param.name} as #{search_param.type}, " \
+                         "but R5 defines it as #{expected['type']}."
+          end
+        else
+          search_param_names = []
+          search_param_names = @searchParams.map(&:name) unless @searchParams.nil?
+          search_params_diff = @resource_class::SEARCH_PARAMS - search_param_names
+          assert (search_params_diff.size <= 0),
+                 "The server does not support the following params: #{search_params_diff.join(', ')}."
+        end
       end
 
       #
@@ -218,6 +243,13 @@ module Crucible
         links "#{REST_SPEC_LINK}##{method}"
         links "#{BASE_SPEC_LINK}/#{resource_class.name.demodulize.downcase}.html"
         validates resource: resource_class.name.demodulize, methods: [method]
+      end
+
+      def r5_search_parameter_definitions
+        resource_name = @resource_class.name.demodulize
+        FHIR::R5::Definitions.send(:search_params).select do |search_param|
+          (search_param.fetch('base', []) & [resource_name, 'Resource']).any?
+        end
       end
 
     end
