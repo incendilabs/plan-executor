@@ -64,6 +64,8 @@ class R4BRoutingTest < Test::Unit::TestCase
     condition = Crucible::Tests::ResourceGenerator.minimal_condition(namespace: FHIR::R4B)
 
     assert_instance_of FHIR::R4B::Condition, condition
+    assert_instance_of FHIR::R4B::CodeableConcept, condition.clinicalStatus
+    assert_equal 'active', condition.clinicalStatus.coding.first.code
     assert_instance_of FHIR::R4B::CodeableConcept, condition.verificationStatus
     assert_instance_of FHIR::R4B::Coding, condition.verificationStatus.coding.first
     assert_equal 'confirmed', condition.verificationStatus.coding.first.code

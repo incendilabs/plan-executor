@@ -19,7 +19,7 @@ R4B compatibility is not evidence of R5 compatibility. Every entry began as
 | `RobustSearchTest` | STU3, R4, R4B | unaudited | R5 robust-search expectations have not been audited. | Same inventory test |
 | `SearchTest` | DSTU2, STU3, R4, R4B | unaudited | R5 search semantics have not been audited. | Same inventory test |
 | `SprinklerSearchTest` | DSTU2, STU3, R4, R4B | unaudited | R5 sprinkler-search behavior has not been audited. | Same inventory test |
-| `TransactionAndBatchTest` | DSTU2, STU3, R4, R4B | unaudited | R5 transaction and batch rules have not been audited. | Same inventory test |
+| `TransactionAndBatchTest` | DSTU2, STU3, R4, R4B, R5 | conditionally compatible | R5 transaction construction, conditional operations, temporary references, response parsing, and Bundle response types are audited. Five existing Spark issue skips remain for transaction ordering, fetch-and-update, and historical batch cases. | `R5TransactionSuiteTest`; `TaskRoutingTest#test_r5_task_clients_construct_and_audited_suites_are_eligible`; `tmp/task-7e/TransactionAndBatchEndpoint.log`; `tmp/task-7e/BatchEndpointProbe.log` |
 | `UnknownSearchParameterTest` | STU3, R4, R4B | unaudited | R5 unknown-search-parameter behavior has not been audited. | Same inventory test |
 
 `supported_versions` is the sole eligibility annotation. The same annotation

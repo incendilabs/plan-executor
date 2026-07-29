@@ -488,6 +488,7 @@ module Crucible
           end
         end
         resource.code = minimal_codeableconcept(system, code, namespace: namespace)
+        resource.clinicalStatus = 'active' if resource.respond_to?(:clinicalStatus=)
         resource.verificationStatus = 'confirmed'
         fix_condition(resource)
         tag_metadata(resource, namespace: namespace)
