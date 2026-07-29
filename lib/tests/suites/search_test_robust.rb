@@ -13,7 +13,7 @@ module Crucible
       def initialize(client1, client2=nil)
         super(client1, client2)
         @category = {id: 'core_functionality', title: 'Core Functionality'}
-        @supported_versions = [:stu3, :r4, :r4b]
+        @supported_versions = [:stu3, :r4, :r4b, :r5]
       end
 
       def setup

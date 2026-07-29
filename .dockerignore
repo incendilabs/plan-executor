@@ -1,3 +1,7 @@
 ﻿.git
 .github
+coverage
+html_summaries
+json_results
 logs
+tmp
