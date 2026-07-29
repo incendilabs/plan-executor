@@ -189,3 +189,92 @@ The same audit found no equivalent R5 invariant requirement for
 `RequestOrchestration` or `DeviceUsage`. Their R4B predecessors
 `RequestGroup` and `DeviceUseStatement` are not resolved from R5 invariant
 dispatch.
+
+## Task 6G: Generator Regression Matrix
+
+Verification performed: 2026-07-28 through 2026-07-29.
+
+This matrix verifies that repeated generation remains valid for every
+advertised R4, R4B, and concrete R5 resource. Each generated object graph is
+checked for generator exceptions, model validation failures, model classes
+from another FHIR version, and required elements that were left empty.
+
+### Local Source Provenance
+
+The committed top-level `Gemfile` still selects the published GitHub `master`
+branches. It was deliberately not used for this pre-merge R5 verification,
+because that copy of `fhir_models` does not yet provide the R5 models.
+
+A disposable Docker build context under `tmp/task-6d/docker-context` copied
+the exact local source revisions below. Its temporary `plan-executor/Gemfile`
+uses Bundler `path:` dependencies for every sibling model/client repository:
+
+| Repository | Revision |
+| --- | --- |
+| `plan-executor` | `10ea167f0a59968ccc926be990b2871c9ecdaf70` |
+| `fhir_models` | `aad13e057050c7511c20cab6d24fdd03dba1a39e` |
+| `fhir_client` | `4273d633730df70bdd58c3f5b14cd595edc04e95` |
+| `fhir_stu3_models` | `71db01196b6cafe2310498135849cae356fe6f44` |
+| `fhir_dstu2_models` | `66c58438d323f634116dc937446d42d9b4356687` |
+
+The tests ran in this self-contained image, with no sibling-source bind mount
+or `RUBYLIB` override:
+
+```text
+incendi/plan_executor:r5-task-6g-local
+sha256:d09f63ecae581d6ffb0fa88bf63f95f64d20f0f106d83d05adb7fb1fe058b352
+```
+
+Inside the image, Bundler resolved `fhir_models` from
+`/workspace/fhir_models` and `fhir_client` from `/workspace/fhir_client`.
+The image used Ruby 3.4.9, RubyGems 3.6.9, and Bundler 4.0.10. Its source
+snapshots intentionally omit `.git` metadata, which causes five non-fatal
+`not a git repository` gemspec diagnostics during test startup.
+
+The R5 definitions archive used by the R5 matrix was:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `tmp/task-5c/r5-definitions.json.zip` | `df0d7259b4a8741d59f4971d96dd486423ecbd414c7060e9dc006ae3c3209c0c` |
+
+### Results
+
+| Verification | Coverage | Result |
+| --- | --- | --- |
+| R5 repeated all-resource audit | 158 concrete resources x depths 2, 3, 4 x 2 iterations = 948 cases | 0 failures |
+| R4 repeated all-resource audit | 148 resources x depths 2, 3, 4 x 2 iterations = 888 cases | 0 failures |
+| R4B repeated all-resource audit | 143 resources x depths 2, 3, 4 x 2 iterations = 858 cases | 0 failures |
+| Focused R5 generator tests | 42 tests, 934 assertions | 0 failures, 0 errors, 0 omissions |
+| Complete unit suite in Docker | 1,313 tests, 4,793 assertions | 0 failures, 0 errors, 0 omissions |
+
+All repeated audits used base seed `20260728`. The R5 audit excludes exactly
+four abstract model types: `Resource`, `DomainResource`, `CanonicalResource`,
+and `MetadataResource`. No concrete R5 resource is intentionally unsupported.
+The R4 and R4B audits cover every resource advertised by their respective
+`RESOURCES` constants. No verification command reported a skip or omission.
+
+The R5 audit manifest is at
+`tmp/task-6g/R5GenerationAudit/manifest.json`; the R4/R4B report is at
+`tmp/task-6g/LegacyGenerationAudit.json`. Raw focused and complete-suite logs
+are `tmp/task-6g/FocusedGeneratorSuite.log` and
+`tmp/task-6g/FullUnitSuite.log`. These artifacts are retained locally and are
+not committed.
+
+The R5 all-resource format audit that drove Task 6F was also rerun using the
+same seed/depth/iteration matrix. It changed from 42 failures across 29
+resources before the invariants to 0 failures across all 948 cases after the
+invariants and XML-schema compatibility adjustment.
+
+The main R5 command was:
+
+```sh
+R5_DEFINITIONS_ARCHIVE=/sources/r5-definitions.json.zip \
+bundle exec rake 'crucible:audit_r5_resource_generation[/evidence/R5GenerationAudit,20260728,2]'
+```
+
+The complete unit suite command was:
+
+```sh
+bundle exec ruby -Itest -e \
+  'Dir["test/unit/**/*_test.rb"].sort.each { |file| require File.expand_path(file) }'
+```
