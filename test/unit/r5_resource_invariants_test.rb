@@ -237,6 +237,43 @@ class R5ResourceInvariantsTest < Test::Unit::TestCase
     assert_r5_json_and_xml_valid(resource)
   end
 
+  def test_measure_report_stratifier_component_has_a_serializable_required_choice
+    component =
+      FHIR::R5::MeasureReport::Group::Stratifier::Stratum::Component.new(
+        code: concept('Measure stratifier'),
+        valueRange: FHIR::R5::Range.new
+      )
+
+    generator.apply_invariants!(component)
+
+    assert_required_choice(component, 'value', 'valueCodeableConcept')
+    assert_not_empty component.valueCodeableConcept.text
+
+    resource = FHIR::R5::MeasureReport.new(
+      status: 'complete',
+      type: 'individual',
+      measure: 'http://example.test/Measure/example',
+      period: FHIR::R5::Period.new(
+        start: '2026-01-01T00:00:00Z',
+        end: '2026-01-01T00:00:00Z'
+      ),
+      group: [
+        FHIR::R5::MeasureReport::Group.new(
+          stratifier: [
+            FHIR::R5::MeasureReport::Group::Stratifier.new(
+              stratum: [
+                FHIR::R5::MeasureReport::Group::Stratifier::Stratum.new(
+                  component: [component]
+                )
+              ]
+            )
+          ]
+        )
+      ]
+    )
+    assert_r5_json_and_xml_valid(resource)
+  end
+
   def test_inventory_item_association_has_a_serializable_required_ratio
     association = FHIR::R5::InventoryItem::Association.new(
       associationType: concept('Package'),
