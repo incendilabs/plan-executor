@@ -672,6 +672,16 @@ module Crucible
             'valueBoolean',
             true
           )
+        when FHIR::R5::MeasureReport::Group::Stratifier::Stratum::Component
+          ensure_serializable_choice!(
+            resource,
+            'value',
+            'valueCodeableConcept',
+            textonly_codeableconcept(
+              'Generated measure report stratifier value',
+              namespace: FHIR::R5
+            )
+          )
         when FHIR::R5::Ingredient::Substance::Strength::ReferenceStrength
           ensure_serializable_choice!(
             resource,
