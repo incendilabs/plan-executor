@@ -566,3 +566,48 @@ image.
 Raw endpoint logs and the retained probe are under `tmp/task-7f/` and are not
 committed. The harness source snapshot omits `.git` metadata, causing its
 non-fatal `not a git repository` diagnostics at startup.
+
+## Task 7I: Incendilabs Search Regression Verification
+
+Verification performed: 2026-07-30.
+
+`ConsentSearchByPatientReferenceTest`, `ElementsSearchParameterTest`, and
+`UnknownSearchParameterTest` now explicitly advertise `:r5`. Consent setup
+uses the created Patient reference. R5 assigns this reference to
+`Consent.subject`; STU3, R4, and R4B retain their respective
+`Consent.patient` assignment.
+
+The R5 Consent `patient` search parameter is a `reference` parameter targeting
+Patient and its expression includes `Consent.subject`. The focused endpoint
+run returned exactly the newly created Consent.
+
+The `_elements=name,birthDate` search retained the Patient `id`, returned the
+required `meta.tag` coding with system
+`http://terminology.hl7.org/CodeSystem/v3-ObservationValue` and code
+`SUBSETTED`, retained `name` and `birthDate`, and omitted the populated
+`gender`. The existing read-with-`_elements` case remains the explicit Spark
+#1336 skip.
+
+The camel-case `QuestionnaireResponse` parameter `basedOn` remains unknown in
+R5; the registered parameter is `based-on`. Both GET and POST searches return
+a searchset Bundle containing a warning `FHIR::R5::OperationOutcome` entry
+with `search.mode=outcome`.
+
+| Verification | Result |
+| --- | --- |
+| `test/unit/r5_incendi_search_regressions_test.rb` | 5 tests, 23 assertions, 0 failures, 0 errors, 0 omissions |
+| `test/unit/r5_incendi_search_regressions_test.rb`, `test/unit/supported_versions_test.rb`, `test/unit/task_routing_test.rb` | 22 tests, 93 assertions, 0 failures, 0 errors, 0 omissions |
+| R5 `ConsentSearchByPatientReferenceTest` endpoint run | 1 pass, 0 fail, 0 error, 0 skip |
+| R5 `ElementsSearchParameterTest` endpoint run | 1 pass, 0 fail, 0 error, 1 existing Spark #1336 skip |
+| R5 `UnknownSearchParameterTest` endpoint run | 12 pass, 0 fail, 0 error, 0 skip |
+
+The endpoint runs used isolated local containers on `task7i-r5`:
+`sparkfhir/spark:r5-task7h-local`
+(`sha256:c476232d559e0f0cd1cbfe8eb7310853e60207eb97428ab20a86e7f1e1cccc9d`),
+`sparkfhir/mongo:r5-task7g-local`
+(`sha256:27943cfaf58ba5cd790ce0fe1bdd8441816c1a16d1644b224b04251214353fbd`),
+and the local-source harness image
+`incendi/plan_executor:r5-task7h-local-deps`
+(`sha256:1624e45946bc5eed57538177ac669f3418f27dfa9e6082ecac42a8cbff770ba0`).
+The raw suite and response-probe logs are retained under `tmp/task-7i/` and
+are not committed.

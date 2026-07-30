@@ -14,7 +14,7 @@ module Crucible
         super(client1, client2)
         @tags.append('indendilabs')
         @category = { id: 'indendilabs', title: 'Indendilabs' }
-        @supported_versions = [:stu3, :r4, :r4b]
+        @supported_versions = [:stu3, :r4, :r4b, :r5]
       end
 
       def setup
@@ -25,7 +25,11 @@ module Crucible
         @patient_id = reply.id
 
         @consent = ResourceGenerator.generate(version_namespace.const_get(:Consent))
-        @consent.patient = @patient.to_reference
+        if fhir_version == :r5
+          @consent.subject = @patient.to_reference
+        else
+          @consent.patient = @patient.to_reference
+        end
         reply = @client.create(@consent)
         assert_response_ok(reply)
         @consent_id = reply.id
@@ -58,7 +62,10 @@ module Crucible
         reply = @client.search(version_namespace.const_get(:Consent), options)
         assert_response_ok(reply)
         assert_bundle_response(reply)
-        assert(1 == reply.resource.entry.size, "Consent not returned by search")
+        consent_entries = reply.resource.entry.select do |entry|
+          entry.resource.is_a?(version_namespace.const_get(:Consent))
+        end
+        assert_equal [@consent_id], consent_entries.map { |entry| entry.resource.id }, 'The search did not return the created Consent.'
       end
 
     end

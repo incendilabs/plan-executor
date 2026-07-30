@@ -36,29 +36,35 @@ class TaskRoutingTest < Test::Unit::TestCase
 
   def test_r5_task_clients_construct_and_audited_suites_are_eligible
     client = build_fhir_client('http://r5.example', 'r5')
+    consent_test = Crucible::Tests::Executor.new(client).find_test('ConsentSearchByPatientReferenceTest')
+    elements_test = Crucible::Tests::Executor.new(client).find_test('ElementsSearchParameterTest')
     patch_test = Crucible::Tests::Executor.new(client).find_test('FhirPathPatchTest')
     resource_test = Crucible::Tests::Executor.new(client).find_test('ResourceTest')
     robust_search_test = Crucible::Tests::Executor.new(client).find_test('RobustSearchTest')
     search_test = Crucible::Tests::Executor.new(client).find_test('SearchTest')
     sprinkler_search_test = Crucible::Tests::Executor.new(client).find_test('SprinklerSearchTest')
     transaction_test = Crucible::Tests::Executor.new(client).find_test('TransactionAndBatchTest')
+    unknown_search_parameter_test = Crucible::Tests::Executor.new(client).find_test('UnknownSearchParameterTest')
 
     assert_equal :r5, client.fhir_version
+    assert_true eligible_for_fhir_version?(consent_test, :r5)
+    assert_true eligible_for_fhir_version?(elements_test, :r5)
     assert_true eligible_for_fhir_version?(patch_test, :r5)
     assert_true eligible_for_fhir_version?(resource_test, :r5)
     assert_true eligible_for_fhir_version?(robust_search_test, :r5)
     assert_true eligible_for_fhir_version?(search_test, :r5)
     assert_true eligible_for_fhir_version?(sprinkler_search_test, :r5)
     assert_true eligible_for_fhir_version?(transaction_test, :r5)
+    assert_true eligible_for_fhir_version?(unknown_search_parameter_test, :r5)
   end
 
-  def test_r5_custom_execution_rejects_an_unaudited_suite
+  def test_r5_custom_execution_rejects_a_non_r5_suite
     execute_output = capture_stdout do
-      invoke_task('crucible:execute_custom', 'UnknownSearchParameterTest', 'r5')
+      invoke_task('crucible:execute_custom', 'ConnectathonPatientTrackTest', 'r5')
     end
 
     assert_match(/does not support fhir version r5/, execute_output)
-    assert_match(/Execute Custom UnknownSearchParameterTest completed/, execute_output)
+    assert_match(/Execute Custom ConnectathonPatientTrackTest completed/, execute_output)
   end
 
   def test_unknown_and_omitted_task_versions_fail_before_client_construction
@@ -104,11 +110,11 @@ class TaskRoutingTest < Test::Unit::TestCase
       end
     end.uniq.sort
 
-    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest SprinklerSearchTest TransactionAndBatchTest], executable_suites
+    assert_equal %w[ConsentSearchByPatientReferenceTest ElementsSearchParameterTest FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest SprinklerSearchTest TransactionAndBatchTest UnknownSearchParameterTest], executable_suites
     assert_equal executable_suites, listed_suites
   end
 
-  def test_r5_listing_includes_audited_search_suites_and_excludes_unaudited_suites
+  def test_r5_listing_includes_audited_suites_and_excludes_non_r5_suites
     listing_output = capture_stdout do
       invoke_task('crucible:list_all', 'r5')
     end
@@ -129,16 +135,22 @@ class TaskRoutingTest < Test::Unit::TestCase
     assert_match(/SearchTest/, suite_listing_output)
     assert_match(/SprinklerSearchTest/, listing_output)
     assert_match(/SprinklerSearchTest/, suite_listing_output)
-    assert_no_match(/UnknownSearchParameterTest/, listing_output)
-    assert_no_match(/UnknownSearchParameterTest/, suite_listing_output)
+    assert_match(/ConsentSearchByPatientReferenceTest/, listing_output)
+    assert_match(/ConsentSearchByPatientReferenceTest/, suite_listing_output)
+    assert_match(/ElementsSearchParameterTest/, listing_output)
+    assert_match(/ElementsSearchParameterTest/, suite_listing_output)
+    assert_match(/UnknownSearchParameterTest/, listing_output)
+    assert_match(/UnknownSearchParameterTest/, suite_listing_output)
+    assert_no_match(/ConnectathonPatientTrackTest/, listing_output)
+    assert_no_match(/ConnectathonPatientTrackTest/, suite_listing_output)
   end
 
-  def test_r5_metadata_task_rejects_an_unaudited_suite
+  def test_r5_metadata_task_rejects_a_non_r5_suite
     error = assert_raise(Crucible::FHIRVersion::UnsupportedVersionError) do
-      invoke_task('crucible:metadata', 'UnknownSearchParameterTest', 'r5')
+      invoke_task('crucible:metadata', 'ConnectathonPatientTrackTest', 'r5')
     end
 
-    assert_match(/Test UnknownSearchParameterTest does not support fhir version r5/, error.message)
+    assert_match(/Test ConnectathonPatientTrackTest does not support fhir version r5/, error.message)
   end
 
   def test_testscript_tasks_remain_stu3_only
