@@ -8,6 +8,21 @@ unless Rake::Task.task_defined?('crucible:execute')
 end
 
 class TaskRoutingTest < Test::Unit::TestCase
+  R5_SUITE_TITLES = %w[
+    ConsentSearchByPatientReferenceTest
+    ElementsSearchParameterTest
+    FhirPathPatchTest
+    FormatTest
+    HistoryTest
+    ReadTest
+    ResourceTest
+    RobustSearchTest
+    SearchTest
+    SprinklerSearchTest
+    TransactionAndBatchTest
+    UnknownSearchParameterTest
+  ].freeze
+
   TASK_ARGUMENTS = {
     'crucible:execute' => [:url, :fhir_version, :test, :resource, :output],
     'crucible:execute_all' => [:url, :fhir_version, :output],
@@ -151,6 +166,16 @@ class TaskRoutingTest < Test::Unit::TestCase
     end
 
     assert_match(/Test ConnectathonPatientTrackTest does not support fhir version r5/, error.message)
+  end
+
+  def test_r5_metadata_task_accepts_every_audited_suite
+    R5_SUITE_TITLES.each do |suite_title|
+      assert_nothing_raised("#{suite_title} metadata should support R5") do
+        capture_stdout do
+          invoke_task('crucible:metadata', suite_title, 'r5')
+        end
+      end
+    end
   end
 
   def test_testscript_tasks_remain_stu3_only

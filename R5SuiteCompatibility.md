@@ -1,6 +1,6 @@
 # FHIR R5 Suite Compatibility Inventory
 
-Status date: 2026-07-29
+Status date: 2026-07-30
 
 This is the complete initial R5 audit inventory. It is derived from the 12
 suite classes that currently declare `:r4b` in `supported_versions`.
@@ -31,3 +31,20 @@ supporting audit evidence.
 FHIR TestScript artifacts are excluded from this inventory. They use
 `supported_versions == [:stu3]`, are loaded only for STU3 clients, and R5
 TestScript task requests are rejected.
+
+## Final Eligibility Verification
+
+Task 7J verified the same 12-suite set through `crucible:list_suites[r5]`,
+the `crucible:metadata` task, targeted endpoint execution, and a clean
+`crucible:execute_all[...,r5,stdout]` run. The focused
+`TaskRoutingTest#test_r5_metadata_task_accepts_every_audited_suite` test
+invokes metadata generation for each inventory entry; the existing routing
+and supported-version tests assert that the listing and executable sets are
+identical and that every R4 suite remains R4B-capable.
+
+The clean aggregate run completed with `3539 PASS`, `0 FAIL`, `0 ERROR`, and
+`477 SKIP`. Its evidence is retained in `tmp/task-7j/R5ExecuteAll.log`.
+Expected skips remain limited to existing Spark issues: ResourceTest
+`$validate` (#205), RobustSearch `$match` (#310), Sprinkler `_revinclude`
+(#307), Elements read `_elements` (#1336), and transaction/batch cases
+(#304, #305, and #306). FHIR TestScripts remain outside the R5 execution set.

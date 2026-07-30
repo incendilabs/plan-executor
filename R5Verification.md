@@ -611,3 +611,61 @@ and the local-source harness image
 (`sha256:1624e45946bc5eed57538177ac669f3418f27dfa9e6082ecac42a8cbff770ba0`).
 The raw suite and response-probe logs are retained under `tmp/task-7i/` and
 are not committed.
+
+## Task 7J: Final R5 Suite Eligibility Verification
+
+Verification performed: 2026-07-30.
+
+The final R5 eligibility set contains the 12 explicitly audited suite classes:
+`ConsentSearchByPatientReferenceTest`, `ElementsSearchParameterTest`,
+`FhirPathPatchTest`, `FormatTest`, `HistoryTest`, `ReadTest`, `ResourceTest`,
+`RobustSearchTest`, `SearchTest`, `SprinklerSearchTest`,
+`TransactionAndBatchTest`, and `UnknownSearchParameterTest`.
+
+`crucible:list_suites[r5]` reported exactly those suites. The focused
+metadata-routing test invokes `crucible:metadata[<suite>,r5]` for every entry;
+the existing metadata rejection test continues to reject
+`ConnectathonPatientTrackTest` for R5. TestScript artifacts remain explicitly
+STU3-only and R5 TestScript task requests remain rejected.
+
+The first complete R5 `ResourceTest` exposed a nondeterministic generator
+defect: `MeasureReport.group.stratifier.stratum.component.value[x]` could
+select an empty `Range`, which serializes as `{}` and leaves the required
+choice absent on the wire. The R5 generator now replaces an empty component
+choice with a serializable `valueCodeableConcept`. Its focused invariant test
+checks JSON/XML round trips; a 100-report R5 JSON generation probe found zero
+invalid reports after the correction.
+
+| Verification | PASS | FAIL | ERROR | SKIP |
+| --- | ---: | ---: | ---: | ---: |
+| `ResourceTest` rerun | 2,340 | 0 | 0 | 468 |
+| `FhirPathPatchTest` | 6 | 0 | 0 | 0 |
+| `ReadTest` | 6 | 0 | 0 | 0 |
+| `FormatTest` | 26 | 0 | 0 | 0 |
+| `TransactionAndBatchTest` | 8 | 0 | 0 | 5 |
+| `HistoryTest` | 11 | 0 | 0 | 0 |
+| `SearchTest` | 1,092 | 0 | 0 | 0 |
+| `RobustSearchTest` | 0 | 0 | 0 | 1 |
+| `ConsentSearchByPatientReferenceTest` | 1 | 0 | 0 | 0 |
+| `SprinklerSearchTest` | 36 | 0 | 0 | 2 |
+| `ElementsSearchParameterTest` | 1 | 0 | 0 | 1 |
+| `UnknownSearchParameterTest` | 12 | 0 | 0 | 0 |
+| Clean `execute_all` aggregate | 3,539 | 0 | 0 | 477 |
+
+`ResourceTest` covers all 156 R5 CRUD-testable resources. Each reports 15
+passes and 3 expected `$validate` skips (Spark #205), for 2,340 passes and
+468 skips. `SearchTest` covers those same 156 resources with 7 passes each,
+for 1,092 passes. This additional R5 resource coverage is why the R5 pass
+total must not be compared directly with R4B's raw total.
+
+Focused verification ran in
+`incendi/plan_executor:r5-task7h-local-deps`
+(`sha256:1624e45946bc5eed57538177ac669f3418f27dfa9e6082ecac42a8cbff770ba0`)
+against clean `sparkfhir/spark:r5-task7h-local` and
+`sparkfhir/mongo:r5-task7g-local` containers. The endpoint CapabilityStatement
+reported FHIR `5.0.0`. The focused MeasureReport invariant suite passed with
+17 tests and 313 assertions; the metadata routing suite passed with 10 tests
+and 69 assertions. Their final combined Docker run, including the unchanged
+R4-to-R4B eligibility parity assertion, passed with 35 tests and 394
+assertions. The retained raw evidence is under `tmp/task-7j/` and is not
+committed.
