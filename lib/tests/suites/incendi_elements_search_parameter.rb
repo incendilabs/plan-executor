@@ -14,7 +14,7 @@ module Crucible
         super(client1, client2)
         @tags.append('incendilabs')
         @category = { id: 'incendilabs', title: 'Incendilabs' }
-        @supported_versions = [:stu3, :r4, :r4b]
+        @supported_versions = [:stu3, :r4, :r4b, :r5]
       end
 
       def setup
@@ -80,6 +80,11 @@ module Crucible
 
         patient = patient_entries.first.resource
         assert_equal @patient_id, patient.id, 'Expected the Patient id to be retained even when _elements omits id.', reply.body
+        subsetted_tag = patient.meta&.tag&.find do |tag|
+          tag.system == 'http://terminology.hl7.org/CodeSystem/v3-ObservationValue' &&
+            tag.code == 'SUBSETTED'
+        end
+        assert(subsetted_tag, 'Expected the Patient meta.tag to identify the partial result as SUBSETTED.', reply.body)
         assert(patient.name && patient.name.any?, 'Expected Patient.name to be retained when _elements includes name.', reply.body)
         assert(patient.gender.nil?, 'Expected Patient.gender to be omitted when _elements only includes name,birthDate.', reply.body)
         assert_equal '1974-12-25', patient.birthDate, 'Expected Patient.birthDate to be retained when _elements includes birthDate.', reply.body

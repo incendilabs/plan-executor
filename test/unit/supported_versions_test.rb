@@ -58,7 +58,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
                             .map { |suite| suite.class.name.demodulize }
                             .sort
 
-    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest SprinklerSearchTest TransactionAndBatchTest], r5_suite_classes
+    assert_equal %w[ConsentSearchByPatientReferenceTest ElementsSearchParameterTest FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest SprinklerSearchTest TransactionAndBatchTest UnknownSearchParameterTest], r5_suite_classes
   end
 
   def test_r5_listing_and_execution_eligibility_match_the_audited_suites
@@ -79,7 +79,7 @@ class SupportedVersionsTest < Test::Unit::TestCase
       end
     end.uniq.sort
 
-    assert_equal %w[FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest SprinklerSearchTest TransactionAndBatchTest], r5_executable_suites
+    assert_equal %w[ConsentSearchByPatientReferenceTest ElementsSearchParameterTest FhirPathPatchTest FormatTest HistoryTest ReadTest ResourceTest RobustSearchTest SearchTest SprinklerSearchTest TransactionAndBatchTest UnknownSearchParameterTest], r5_executable_suites
     assert_equal r5_executable_suites, r5_listed_suite_classes
   end
 
