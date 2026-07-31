@@ -1,13 +1,13 @@
 GIT
   remote: https://github.com/incendilabs/fhir_client.git
-  revision: 79026641f9b2ac7cf30bc27a3528e505d34c67e8
+  revision: 23da8eda52a7f338bf28b1c5cd20d2c8cd981431
   branch: master
   specs:
-    fhir_client (5.0.0)
+    fhir_client (5.1.0)
       activesupport (>= 3)
       addressable (>= 2.9.0)
       fhir_dstu2_models (>= 1.0.10)
-      fhir_models (>= 4.0.2)
+      fhir_models (>= 5.0.0)
       fhir_stu3_models (>= 3.0.1)
       nokogiri (>= 1.10.4)
       oauth2 (~> 1.1)
@@ -27,10 +27,10 @@ GIT
 
 GIT
   remote: https://github.com/incendilabs/fhir_models.git
-  revision: a143d2e21d0253b33fdaeb17e2d152ad656c9a3e
+  revision: e19f0ea2709c367f441c31ad01892275645bbe92
   branch: master
   specs:
-    fhir_models (4.1.0)
+    fhir_models (5.0.0)
       bcp47 (>= 0.3)
       date_time_precision (>= 0.8)
       mime-types (>= 3.0)
