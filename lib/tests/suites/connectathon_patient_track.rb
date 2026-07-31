@@ -30,8 +30,8 @@ module Crucible
       end
 
       def teardown
-        @client.destroy(FHIR::Patient, @patient_id) if !@patient_id.nil?
-        @client.destroy(FHIR::Patient, @patient_us_id) if !@patient_us_id.nil?
+        @client.destroy(FHIR::STU3::Patient, @patient_id) if !@patient_id.nil?
+        @client.destroy(FHIR::STU3::Patient, @patient_us_id) if !@patient_us_id.nil?
       end
 
       #
@@ -290,7 +290,7 @@ module Crucible
         }
         skip 'Patient not registered properly in C8T1_1A.' unless @patient_id
 
-        result = @client.resource_instance_history(FHIR::Patient,@patient_id)
+        result = @client.resource_instance_history(FHIR::STU3::Patient,@patient_id)
         assert_response_ok result
         assert_equal 2, result.resource.total, 'The number of returned versions is not correct'
         warning { assert_equal 'history', result.resource.type, 'The bundle does not have the correct type: history' }
@@ -355,10 +355,10 @@ module Crucible
 
         skip 'Patient not registered properly in C8T1_1A.' unless @patient_id
 
-        reply = @client.destroy(FHIR::Patient, @patient_id)
+        reply = @client.destroy(FHIR::STU3::Patient, @patient_id)
         assert([200, 204].include?(reply.code), 'The server should have returned a 200 or 204 upon successful deletion.')
 
-        reply = @client.read(FHIR::Patient, @patient_id)
+        reply = @client.read(FHIR::STU3::Patient, @patient_id)
 
         assert([404, 410].include?(reply.code), 'The server should have deleted the resource and now return 410.')
         warning { assert(reply.code == 404, 'Deleted resource was reported as unknown (404).  If the system tracks deleted resources, it should respond with 410.')}

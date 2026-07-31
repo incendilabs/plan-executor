@@ -29,7 +29,7 @@ module Crucible
       end
 
       def teardown
-        @client.destroy(FHIR::MedicationRequest, @medication_order_id) unless @medication_order_id.nil?
+        @client.destroy(FHIR::STU3::MedicationRequest, @medication_order_id) unless @medication_order_id.nil?
       end
 
       ['JSON','XML'].each do |fmt|
@@ -46,9 +46,9 @@ module Crucible
             validates resource: 'MedicationRequest', methods: ['read']
           }
           
-          reply = @client.read(FHIR::MedicationRequest, @medication_order_id, resource_format(fmt))
+          reply = @client.read(FHIR::STU3::MedicationRequest, @medication_order_id, resource_format(fmt))
           assert_response_ok(reply)
-          assert_resource_type(reply, FHIR::MedicationRequest)
+          assert_resource_type(reply, FHIR::STU3::MedicationRequest)
           assert_resource_content_type(reply, fmt.downcase)
           warning { 
             assert(!reply.resource.meta.nil?, 'Last Updated and VersionId not present.')
@@ -73,14 +73,14 @@ module Crucible
           skip 'TODO: https://github.com/FirelyTeam/spark/issues/302'
 
           patchset = [{ op: "replace", path: "MedicationRequest/status", value: "completed" }]
-          reply = @client.partial_update(FHIR::MedicationRequest, @medication_order_id, patchset, {}, resource_format(fmt))
+          reply = @client.partial_update(FHIR::STU3::MedicationRequest, @medication_order_id, patchset, {}, resource_format(fmt))
 
           assert_response_ok(reply)
           warning { 
-            assert_resource_type(reply, FHIR::MedicationRequest)
+            assert_resource_type(reply, FHIR::STU3::MedicationRequest)
             assert_resource_content_type(reply, fmt.downcase)
           }
-          reply = @client.read(FHIR::MedicationRequest, @medication_order_id, resource_format(fmt))
+          reply = @client.read(FHIR::STU3::MedicationRequest, @medication_order_id, resource_format(fmt))
           assert_response_ok(reply)
           assert_equal(reply.resource.status, 'completed', 'Status not updated from patch.')
           warning {
@@ -109,11 +109,11 @@ module Crucible
           # According to the FHIR spec, the If-Match eTag for version id should be weak.
           options = { 'If-Match' => "W/\"#{@previous_version_id}\"" }
 
-          reply = @client.partial_update(FHIR::MedicationRequest, @medication_order_id, patchset, options, resource_format(fmt))
+          reply = @client.partial_update(FHIR::STU3::MedicationRequest, @medication_order_id, patchset, options, resource_format(fmt))
 
           assert_response_conflict(reply)
 
-          reply = @client.read(FHIR::MedicationRequest, @medication_order_id, resource_format(fmt))
+          reply = @client.read(FHIR::STU3::MedicationRequest, @medication_order_id, resource_format(fmt))
           assert_response_ok(reply)
           assert_equal(reply.resource.status, 'completed', 'Resource should not have been patched because version id was stale.')
 
