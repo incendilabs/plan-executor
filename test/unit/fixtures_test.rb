@@ -11,12 +11,20 @@ class FixturesTest < Test::Unit::TestCase
   json_fixtures = File.join('fixtures','**','*.json')
   raise 'No Fixture Files Found' if Dir[fixtures].empty? && Dir[json_fixtures].empty?
 
+  def self.fixture_version(file)
+    directory_version = file.match(/fixtures\/([^\/]+)/)[1].to_sym
+    filename = File.basename(file, File.extname(file))
+    filename_version = filename.split('.').last.to_sym
+
+    Crucible::FHIRVersion::KNOWN.include?(filename_version) ? filename_version : directory_version
+  end
+
   # Define test methods to validate example JSON
   Dir.glob(fixtures).each do | file |    
     basename = File.basename(file,'.xml')
     next if basename.start_with?('ccda')
 
-    version = file.match(/fixtures\/([^\/]+)/)[1]
+    version = fixture_version(file)
     xml = File.open(file, 'r:bom|UTF-8', &:read)
 
     define_method("test_fixture_validation_#{basename}_#{version}") do
@@ -27,7 +35,7 @@ class FixturesTest < Test::Unit::TestCase
     basename = File.basename(file,'.json')
     json = File.open(file, 'r:bom|UTF-8', &:read)
 
-    version = file.match(/fixtures\/([^\/]+)/)[1]
+    version = fixture_version(file)
     define_method("test_json_fixture_validation_#{basename}_#{version}") do
       run_json_validate(basename, json, version.to_sym)
     end
