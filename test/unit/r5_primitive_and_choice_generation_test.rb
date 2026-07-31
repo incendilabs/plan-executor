@@ -42,9 +42,9 @@ class R5PrimitiveAndChoiceGenerationTest < Test::Unit::TestCase
 
       json = resource.to_json
       json_value = JSON.parse(json).dig('parameter', 0, 'valueInteger64')
-      assert_instance_of Integer, json_value
-      assert_equal value, json_value
-      assert_match(/"valueInteger64"\s*:\s*#{value}(?:\s*[,}])/, json)
+      assert_instance_of String, json_value
+      assert_equal value.to_s, json_value
+      assert_match(/"valueInteger64"\s*:\s*"#{value}"(?:\s*[,}])/, json)
 
       xml_value = FHIR::R5.from_contents(resource.to_xml)
                           .parameter
