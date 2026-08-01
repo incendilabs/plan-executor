@@ -1,0 +1,160 @@
+name: CI R5
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+
+jobs:
+  build:
+    if: github.repository == 'incendilabs/plan-executor'
+
+    runs-on: ubuntu-24.04
+    steps:
+      -
+        name: Checkout plan-executor
+        uses: actions/checkout@v7
+      -
+        name: Build plan-executor Docker image
+        run: docker build -t incendi/plan_executor:latest .
+      -
+        name: Checkout Spark
+        uses: actions/checkout@v7
+        with:
+          repository: FirelyTeam/spark
+          ref: master
+          path: spark
+      -
+        name: Record Spark revision
+        run: |
+          git -C spark rev-parse HEAD | tee spark-revision.txt
+      -
+        name: Build Spark R5 Docker image
+        run: |
+          docker build spark \
+            --file spark/.docker/linux/Spark.R5.Dockerfile \
+            --tag sparkfhir/spark:r5-latest
+      -
+        name: Build Mongo R5 Docker image
+        run: |
+          docker build spark \
+            --file spark/.docker/linux/Mongo.R5.Dockerfile \
+            --tag sparkfhir/mongo:r5-latest
+      -
+        name: Start Spark
+        run: |
+          mkdir -p logs html_summaries json_results
+          docker compose -f docker-compose.yml -f docker-compose-r5.yml up -d spark
+      -
+        name: Wait for and validate R5 metadata
+        run: |
+          set -e
+          for attempt in $(seq 1 30); do
+            if docker compose -f docker-compose.yml -f docker-compose-r5.yml run --rm --no-deps plan_executor \
+              bundle exec ruby -rnet/http -e '
+                require "fhir_client"
+
+                response = Net::HTTP.get_response(URI("http://spark:8080/fhir/metadata"))
+                abort "metadata request returned #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+
+                capability = FHIR::R5::Json.from_json(response.body)
+                abort "unexpected CapabilityStatement fhirVersion #{capability.fhirVersion.inspect}" unless capability.fhirVersion == "5.0.0"
+              '; then
+              exit 0
+            fi
+
+            echo "Waiting for Spark R5 metadata (attempt ${attempt}/30)"
+            sleep 5
+          done
+
+          echo 'Spark R5 metadata did not become ready in time' >&2
+          exit 1
+      -
+        name: Run R5 tests
+        id: suite
+        run: |
+          set +e
+          docker compose -f docker-compose.yml -f docker-compose-r5.yml run --rm --no-deps plan_executor \
+            ./execute_all.sh 'http://spark:8080/fhir' r5 'html|json|stdout'
+          suite_status=$?
+          printf '%s\n' "$suite_status" > suite-exit-status
+          echo "suite_status=$suite_status" >> "$GITHUB_OUTPUT"
+          exit 0
+      -
+        name: Capture service logs
+        if: ${{ always() }}
+        run: |
+          mkdir -p logs
+          cp spark-revision.txt logs/spark-revision.txt 2>/dev/null || true
+          docker compose -f docker-compose.yml -f docker-compose-r5.yml logs spark > logs/spark.log 2>&1 || true
+          docker compose -f docker-compose.yml -f docker-compose-r5.yml logs mongodb > logs/mongodb.log 2>&1 || true
+      -
+        name: Combine test results
+        if: ${{ always() }}
+        run: |
+          set +e
+          ./combine-test-results.sh json_results annotations.json
+          combine_status=$?
+          printf '%s\n' "$combine_status" > combine-exit-status
+          exit 0
+      -
+        name: Attach test results
+        if: ${{ always() && github.event_name != 'pull_request' }}
+        uses: yuzutech/annotations-action@v0.6.0
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          input: annotations.json
+      -
+        name: Archive logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-r5-${{ github.sha }}
+          path: logs/*.log*
+      -
+        name: Archive test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: html_summaries-r5-${{ github.sha }}
+          path: html_summaries/**/*.html
+      -
+        name: Archive JSON results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: json_results-r5-${{ github.sha }}
+          path: json_results/**/*.json
+      -
+        name: Archive annotations file
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: annotations-r5-${{ github.sha }}
+          path: annotations.json
+      -
+        name: Evaluate suite status
+        if: ${{ always() }}
+        run: |
+          if [ ! -f suite-exit-status ]; then
+            echo 'R5 suite did not produce an exit status' >&2
+            exit 1
+          fi
+
+          suite_status=$(cat suite-exit-status)
+          combine_status=$(cat combine-exit-status 2>/dev/null || printf '1')
+          if [ "$suite_status" -ne 0 ]; then
+            echo "R5 suite exited with status $suite_status" >&2
+            exit "$suite_status"
+          fi
+
+          if [ "$combine_status" -ne 0 ]; then
+            echo "R5 result combination exited with status $combine_status" >&2
+            exit "$combine_status"
+          fi
+      -
+        name: Cleanup
+        if: ${{ always() }}
+        run: docker compose -f docker-compose.yml -f docker-compose-r5.yml down
