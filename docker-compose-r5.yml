@@ -1,0 +1,5 @@
+services:
+  spark:
+    image: sparkfhir/spark:r5-latest
+  mongodb:
+    image: sparkfhir/mongo:r5-latest
