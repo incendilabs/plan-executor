@@ -47,6 +47,30 @@ class ResourceGeneratorTest < Test::Unit::TestCase
     assert_nil reference.reference
   end
 
+  def test_empty_r4_usage_context_gets_a_value
+    context = FHIR::UsageContext.new
+
+    Crucible::Tests::ResourceGenerator.apply_invariants!(context)
+
+    assert_instance_of FHIR::CodeableConcept, context.valueCodeableConcept
+    assert_not_empty context.valueCodeableConcept.text
+    assert_nil context.valueQuantity
+    assert_nil context.valueRange
+    assert_nil context.valueReference
+  end
+
+  def test_empty_r4b_usage_context_gets_a_value
+    context = FHIR::R4B::UsageContext.new
+
+    Crucible::Tests::ResourceGenerator.apply_invariants!(context)
+
+    assert_instance_of FHIR::R4B::CodeableConcept, context.valueCodeableConcept
+    assert_not_empty context.valueCodeableConcept.text
+    assert_nil context.valueQuantity
+    assert_nil context.valueRange
+    assert_nil context.valueReference
+  end
+
   def test_populated_r4b_codeable_reference_is_preserved
     reference = FHIR::R4B::CodeableReference.new
     reference.reference = FHIR::R4B::Reference.new(display: 'Existing reference')

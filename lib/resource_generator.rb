@@ -642,15 +642,7 @@ module Crucible
       def self.apply_r5_invariants!(resource)
         case resource
         when FHIR::R5::UsageContext
-          ensure_serializable_choice!(
-            resource,
-            'value',
-            'valueCodeableConcept',
-            textonly_codeableconcept(
-              'Generated usage context',
-              namespace: FHIR::R5
-            )
-          )
+          apply_usage_context_invariant!(resource, namespace: FHIR::R5)
         when FHIR::R5::BiologicallyDerivedProduct::Property
           ensure_serializable_choice!(
             resource,
@@ -737,6 +729,18 @@ module Crucible
         resource
       end
 
+      def self.apply_usage_context_invariant!(resource, namespace:)
+        ensure_serializable_choice!(
+          resource,
+          'value',
+          'valueCodeableConcept',
+          textonly_codeableconcept(
+            'Generated usage context',
+            namespace: namespace
+          )
+        )
+      end
+
       def self.ensure_serializable_choice!(resource, prefix, selected_field, value)
         fields = multiple_type_fields(resource.class).fetch(prefix).values
         populated_fields = fields.select do |field|
@@ -794,6 +798,10 @@ module Crucible
       def self.apply_invariants!(resource)
         fix_codeable_reference(resource)
         clear_prohibited_observation_quantity_comparators!(resource)
+        apply_usage_context_invariant!(resource, namespace: FHIR) if
+          resource.is_a?(FHIR::UsageContext)
+        apply_usage_context_invariant!(resource, namespace: FHIR::R4B) if
+          resource.is_a?(FHIR::R4B::UsageContext)
         apply_r5_invariants!(resource) if
           Crucible::FHIRVersion.for_class(resource) == :r5
 
