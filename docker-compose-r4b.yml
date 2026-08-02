@@ -1,5 +1,0 @@
-services:
-  spark:
-    image: sparkfhir/spark:r4b-latest
-  mongodb:
-    image: sparkfhir/mongo:r4b-latest

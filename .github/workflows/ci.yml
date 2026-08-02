@@ -1,0 +1,207 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+
+jobs:
+  integration:
+    if: github.repository == 'incendilabs/plan-executor'
+
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - fhir_version: r4
+            display_name: R4
+            spark_dockerfile: Spark.R4.Dockerfile
+            mongo_dockerfile: Mongo.R4.Dockerfile
+            capability_version: 4.0.1
+            fhir_namespace: FHIR
+          - fhir_version: r4b
+            display_name: R4B
+            spark_dockerfile: Spark.R4B.Dockerfile
+            mongo_dockerfile: Mongo.R4B.Dockerfile
+            capability_version: 4.3.0
+            fhir_namespace: FHIR::R4B
+          - fhir_version: r5
+            display_name: R5
+            spark_dockerfile: Spark.R5.Dockerfile
+            mongo_dockerfile: Mongo.R5.Dockerfile
+            capability_version: 5.0.0
+            fhir_namespace: FHIR::R5
+          - fhir_version: stu3
+            display_name: STU3
+            spark_dockerfile: Spark.STU3.Dockerfile
+            mongo_dockerfile: Mongo.STU3.Dockerfile
+            capability_version: 3.0.2
+            fhir_namespace: FHIR::STU3
+
+    env:
+      FHIR_VERSION: ${{ matrix.fhir_version }}
+      SPARK_IMAGE: sparkfhir/spark:${{ matrix.fhir_version }}-${{ github.sha }}
+      MONGO_IMAGE: sparkfhir/mongo:${{ matrix.fhir_version }}-${{ github.sha }}
+      PLAN_EXECUTOR_IMAGE: incendi/plan_executor:${{ matrix.fhir_version }}-${{ github.sha }}
+      COMPOSE_PROJECT_NAME: plan-executor-${{ matrix.fhir_version }}-${{ github.run_id }}
+
+    steps:
+      -
+        name: Checkout plan-executor
+        uses: actions/checkout@v7
+      -
+        name: Build plan-executor Docker image
+        run: docker build --tag "$PLAN_EXECUTOR_IMAGE" .
+      -
+        name: Checkout Spark
+        uses: actions/checkout@v7
+        with:
+          repository: FirelyTeam/spark
+          ref: master
+          path: spark
+      -
+        name: Record Spark revision
+        run: |
+          git -C spark rev-parse HEAD | tee spark-revision.txt
+      -
+        name: Build Spark image
+        run: |
+          docker build spark \
+            --file "spark/.docker/linux/${{ matrix.spark_dockerfile }}" \
+            --tag "$SPARK_IMAGE"
+      -
+        name: Build Mongo image
+        run: |
+          docker build spark \
+            --file "spark/.docker/linux/${{ matrix.mongo_dockerfile }}" \
+            --tag "$MONGO_IMAGE"
+      -
+        name: Start Spark
+        run: |
+          mkdir -p logs html_summaries json_results
+          docker compose up -d spark
+      -
+        name: Wait for and validate metadata
+        run: |
+          set -e
+          for attempt in $(seq 1 30); do
+            if docker compose run --rm --no-deps plan_executor \
+              bundle exec ruby -rnet/http -e '
+                require "fhir_client"
+
+                version = ARGV.fetch(0)
+                namespace_name = ARGV.fetch(1)
+                expected = ARGV.fetch(2)
+                response = Net::HTTP.get_response(URI("http://spark:8080/fhir/metadata"))
+                abort "metadata request returned #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+
+                namespace = namespace_name.split("::").inject(Object) { |mod, name| mod.const_get(name) }
+                capability = namespace.const_get(:Json).from_json(response.body)
+                abort "unexpected CapabilityStatement fhirVersion #{capability.fhirVersion.inspect} for #{version}" unless capability.fhirVersion == expected
+              ' '${{ matrix.fhir_version }}' '${{ matrix.fhir_namespace }}' '${{ matrix.capability_version }}'; then
+              exit 0
+            fi
+
+            echo "Waiting for Spark ${{ matrix.display_name }} metadata (attempt ${attempt}/30)"
+            sleep 5
+          done
+
+          echo 'Spark metadata did not become ready in time' >&2
+          exit 1
+      -
+        name: Run integration tests
+        id: suite
+        run: |
+          set +e
+          docker compose run --rm --no-deps plan_executor \
+            ./execute_all.sh 'http://spark:8080/fhir' "$FHIR_VERSION" 'html|json|stdout'
+          suite_status=$?
+          printf '%s\n' "$suite_status" > suite-exit-status
+          echo "suite_status=$suite_status" >> "$GITHUB_OUTPUT"
+          exit 0
+      -
+        name: Capture service logs
+        if: ${{ always() }}
+        run: |
+          mkdir -p logs
+          cp spark-revision.txt logs/spark-revision.txt 2>/dev/null || true
+          docker compose logs spark > logs/spark.log 2>&1 || true
+          docker compose logs mongodb > logs/mongodb.log 2>&1 || true
+      -
+        name: Combine test results
+        if: ${{ always() }}
+        run: |
+          set +e
+          ./combine-test-results.sh json_results annotations.json
+          combine_status=$?
+          printf '%s\n' "$combine_status" > combine-exit-status
+          cp suite-exit-status logs/suite-exit-status.log 2>/dev/null || true
+          cp combine-exit-status logs/combine-exit-status.log 2>/dev/null || true
+          exit 0
+      -
+        name: Attach test results
+        if: ${{ always() && github.event_name != 'pull_request' }}
+        uses: yuzutech/annotations-action@v0.6.0
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          input: annotations.json
+      -
+        name: Archive logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-${{ matrix.fhir_version }}-${{ github.sha }}
+          path: logs/*.log*
+          if-no-files-found: warn
+      -
+        name: Archive test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: html_summaries-${{ matrix.fhir_version }}-${{ github.sha }}
+          path: html_summaries/**/*.html
+          if-no-files-found: warn
+      -
+        name: Archive JSON results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: json_results-${{ matrix.fhir_version }}-${{ github.sha }}
+          path: json_results/**/*.json
+          if-no-files-found: warn
+      -
+        name: Archive annotations file
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: annotations-${{ matrix.fhir_version }}-${{ github.sha }}
+          path: annotations.json
+          if-no-files-found: warn
+      -
+        name: Evaluate suite status
+        if: ${{ always() }}
+        run: |
+          if [ ! -f suite-exit-status ]; then
+            echo '${{ matrix.display_name }} suite did not produce an exit status' >&2
+            exit 1
+          fi
+
+          suite_status=$(cat suite-exit-status)
+          combine_status=$(cat combine-exit-status 2>/dev/null || printf '1')
+          if [ "$suite_status" -ne 0 ]; then
+            echo "${{ matrix.display_name }} suite exited with status $suite_status" >&2
+            exit "$suite_status"
+          fi
+
+          if [ "$combine_status" -ne 0 ]; then
+            echo "${{ matrix.display_name }} result combination exited with status $combine_status" >&2
+            exit "$combine_status"
+          fi
+      -
+        name: Cleanup
+        if: ${{ always() }}
+        run: docker compose down --volumes --remove-orphans
