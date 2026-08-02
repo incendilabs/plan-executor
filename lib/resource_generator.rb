@@ -28,6 +28,7 @@ module Crucible
         }.freeze
       }.freeze
       SIMPLE_QUANTITY_FIELDS = {
+        'Observation' => [:valueQuantity],
         'Range' => [:low, :high],
         'SampledData' => [:origin],
         'Observation::ReferenceRange' => [:low, :high]
