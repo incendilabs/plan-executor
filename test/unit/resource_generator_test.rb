@@ -71,6 +71,23 @@ class ResourceGeneratorTest < Test::Unit::TestCase
     assert_nil context.valueReference
   end
 
+  def test_observation_value_quantity_comparator_is_cleared_for_supported_versions
+    [
+      [FHIR::Observation, FHIR::Quantity],
+      [FHIR::R4B::Observation, FHIR::R4B::Quantity],
+      [FHIR::R5::Observation, FHIR::R5::Quantity]
+    ].each do |observation_class, quantity_class|
+      quantity = quantity_class.new(value: 10, comparator: '>')
+      observation = observation_class.new(valueQuantity: quantity)
+
+      Crucible::Tests::ResourceGenerator.apply_invariants!(observation)
+
+      assert_instance_of quantity_class, observation.valueQuantity
+      assert_equal 10, observation.valueQuantity.value
+      assert_nil observation.valueQuantity.comparator
+    end
+  end
+
   def test_populated_r4b_codeable_reference_is_preserved
     reference = FHIR::R4B::CodeableReference.new
     reference.reference = FHIR::R4B::Reference.new(display: 'Existing reference')

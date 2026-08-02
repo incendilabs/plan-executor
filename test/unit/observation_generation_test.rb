@@ -35,15 +35,22 @@ class ObservationGenerationTest < Test::Unit::TestCase
     end
   end
 
-  def test_r4_and_r4b_observation_quantities_that_allow_comparators_are_unchanged
+  def test_r4_and_r4b_observation_quantity_comparators_are_selectively_cleared
     VERSIONS.each do |version, namespace|
       observation = observation_with_allowed_comparators(namespace)
-      expected = allowed_quantities(observation).map { |path, quantity| [path, quantity.comparator] }
 
       Crucible::Tests::ResourceGenerator.apply_invariants!(observation)
 
       actual = allowed_quantities(observation).map { |path, quantity| [path, quantity.comparator] }
-      assert_equal expected, actual, "#{version} cleared an allowed Quantity comparator"
+      expected = [
+        ["valueQuantity", nil],
+        ["valueRatio.numerator", ">"],
+        ["valueRatio.denominator", "<="],
+        ["component[0].valueQuantity", ">="],
+        ["component[0].valueRatio.numerator", "<="],
+        ["component[0].valueRatio.denominator", ">"]
+      ]
+      assert_equal expected, actual, "#{version} applied the wrong Quantity comparator invariant"
     end
   end
 
