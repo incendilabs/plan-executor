@@ -74,6 +74,9 @@ jobs:
             --file "spark/.docker/linux/${{ matrix.spark_dockerfile }}" \
             --tag "$SPARK_IMAGE"
       -
+        name: Download MongoDB database fixture
+        run: spark/.docker/linux/download-database-fixtures.sh "$FHIR_VERSION"
+      -
         name: Build Mongo image
         run: |
           docker build spark \
