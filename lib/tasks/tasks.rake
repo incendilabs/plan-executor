@@ -114,7 +114,7 @@ namespace :crucible do
     end
 
     require 'benchmark'
-    b = Benchmark.measure { puts JSON.pretty_unparse(executor.extract_metadata_from_test(args.test)) }
+    b = Benchmark.measure { puts JSON.pretty_generate(executor.extract_metadata_from_test(args.test)) }
     puts "Metadata #{args.test} completed in #{b.real} seconds."
   end
 
