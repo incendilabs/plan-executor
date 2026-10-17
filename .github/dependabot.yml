@@ -3,4 +3,23 @@ updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
+
+  - package-ecosystem: bundler
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      fhir:
+        patterns: ["fhir_*"]
+      bundler:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "ruby"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
