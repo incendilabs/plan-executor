@@ -5,5 +5,5 @@ gem 'fhir_stu3_models', git: 'https://github.com/incendilabs/fhir_stu3_models.gi
 gem 'fhir_client', git: 'https://github.com/incendilabs/fhir_client.git', branch: 'master'
 gem 'fhir_models', git: 'https://github.com/incendilabs/fhir_models.git', branch: 'master'
 gem 'activesupport', '>= 6'
-gem 'pry', '~> 0.15.0'
+gem 'pry', '~> 0.16.0'
 gemspec
