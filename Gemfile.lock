@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/incendilabs/fhir_client.git
-  revision: e32abec25f8d6ca1b6997d159c263bb70f54abfd
+  revision: 169b7d290bf5b7a21835e62e2e2e63a71888008d
   branch: master
   specs:
     fhir_client (5.1.0)
@@ -99,13 +99,13 @@ GEM
       bigdecimal
       rexml
     date_time_precision (0.8.1)
-    domain_name (0.6.20240107)
+    domain_name (0.7.20261007)
     drb (2.2.3)
-    faraday (2.14.3)
-      faraday-net_http (>= 2.0, < 3.5)
+    faraday (2.15.0)
+      faraday-net_http (>= 2.0, < 3.6)
       json
       logger
-    faraday-net_http (3.4.4)
+    faraday-net_http (3.5.0)
       net-http (~> 0.5)
     hashdiff (1.2.1)
     hashie (5.1.0)
@@ -119,14 +119,14 @@ GEM
     json (3.1.0)
     jsonpath (1.1.5)
       multi_json
-    jwt (3.2.0)
+    jwt (3.3.0)
       base64
     logger (1.7.0)
     method_source (1.1.0)
     mime-types (3.7.0)
       logger
       mime-types-data (~> 3.2025, >= 3.2025.0507)
-    mime-types-data (3.2026.0701)
+    mime-types-data (3.2026.1013)
     mini_portile2 (2.8.9)
     minitest (6.0.6)
       drb (~> 2.0)
@@ -134,8 +134,11 @@ GEM
     multi_json (1.21.2)
     multi_xml (0.9.1)
       bigdecimal (>= 3.1, < 5)
-    net-http (0.9.1)
+    net-http (0.10.0)
+      net-protocol (>= 0.3.0)
       uri (>= 0.11.1)
+    net-protocol (0.4.0)
+      timeout
     netrc (0.11.0)
     nokogiri (1.19.4)
       mini_portile2 (~> 2.8.2)
@@ -166,7 +169,7 @@ GEM
       pry (~> 0.13)
     public_suffix (7.0.5)
     racc (1.8.1)
-    rack (3.2.6)
+    rack (3.2.7)
     rake (13.4.2)
     reline (0.7.0)
       io-console (~> 0.5)
@@ -185,13 +188,14 @@ GEM
     test-unit (3.7.8)
       power_assert
     tilt (2.9.0)
+    timeout (0.6.1)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     tzinfo-data (1.2026.5)
       tzinfo (>= 1.0.0)
     unicode_utils (1.4.0)
     uri (1.1.2)
-    version_gem (1.1.14)
+    version_gem (1.1.15)
     webmock (3.32.0)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
