@@ -18,6 +18,10 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: secret
+      # MongoDB 8.x exits at startup on Linux kernel 6.19-7.0.13 (e.g. GitHub's
+      # 7.0.0-azure runners) when tcmalloc per-CPU caches are active (SERVER-121912).
+      # Letting glibc own rseq disables those caches so mongod can start.
+      GLIBC_TUNABLES: glibc.pthread.rseq=1
     healthcheck:
       test:
         [
