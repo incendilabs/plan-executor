@@ -140,10 +140,10 @@ GEM
     net-protocol (0.4.0)
       timeout
     netrc (0.11.0)
-    nokogiri (1.19.4)
+    nokogiri (1.19.5)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
-    nokogiri (1.19.4-x64-mingw-ucrt)
+    nokogiri (1.19.5-x64-mingw-ucrt)
       racc (~> 1.4)
     nokogiri-diff (0.3.0)
       nokogiri (~> 1.5)
