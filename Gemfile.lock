@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/incendilabs/fhir_client.git
-  revision: bd59c3d1177dcaff2b03abd5eb239e299b43bf10
+  revision: 475483a2b1d6f6af9b7170bce9149d22eb1c2f9c
   branch: master
   specs:
     fhir_client (5.1.0)
@@ -28,7 +28,7 @@ GIT
 
 GIT
   remote: https://github.com/incendilabs/fhir_models.git
-  revision: 19ed4a6070f08a18b3f839b6b74aba51a7240c67
+  revision: 10926683b35d4b69b86ad7e4abdf6e80ff9480e5
   branch: master
   specs:
     fhir_models (5.0.0)
@@ -39,7 +39,7 @@ GIT
 
 GIT
   remote: https://github.com/incendilabs/fhir_stu3_models.git
-  revision: e37cfa7b49518b918727d093c41954be1f1406aa
+  revision: f446e11187fe8a88c073aebab6d64978adbab794
   branch: master
   specs:
     fhir_stu3_models (3.0.1)
