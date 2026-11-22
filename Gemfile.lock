@@ -33,6 +33,7 @@ GIT
   specs:
     fhir_models (5.0.0)
       bcp47 (>= 0.3)
+      bigdecimal (>= 3.1)
       date_time_precision (>= 0.8)
       mime-types (>= 3.0)
       nokogiri (>= 1.10.4)
@@ -44,6 +45,7 @@ GIT
   specs:
     fhir_stu3_models (3.0.1)
       bcp47 (>= 0.3)
+      bigdecimal (>= 3.1)
       date_time_precision (>= 0.8)
       mime-types (>= 3.0)
       nokogiri (>= 1.10.4)
@@ -107,7 +109,7 @@ GEM
       logger
     faraday-net_http (3.5.0)
       net-http (~> 0.5)
-    hashdiff (1.2.1)
+    hashdiff (1.2.2)
     hashie (5.2.0)
       logger
     http-accept (1.7.0)
@@ -197,7 +199,7 @@ GEM
     unicode_utils (1.4.0)
     uri (1.1.2)
     version_gem (1.1.17)
-    webmock (3.34.0)
+    webmock (3.35.0)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
